@@ -299,8 +299,53 @@ window.onerror = function(msg, src, line, col, err) {
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tweetnacl/1.0.3/nacl-fast.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bs58@5.0.0/dist/bs58.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tweetnacl@1.0.3/nacl-fast.min.js"></script>
+<script>
+// Inline base58 decoder — no CDN dependency
+var bs58=(function(){
+  var ALPHABET='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+  var BASE=ALPHABET.length;
+  var LEADER=ALPHABET[0];
+  var FACTOR=Math.log(BASE)/Math.log(256);
+  var iFACTOR=Math.log(256)/Math.log(BASE);
+  var map={};
+  for(var i=0;i<ALPHABET.length;i++)map[ALPHABET[i]]=i;
+  function decode(str){
+    if(!str||typeof str!=='string')throw new Error('Expected string');
+    var bytes=[0];
+    for(var i=0;i<str.length;i++){
+      var c=map[str[i]];
+      if(c===undefined)throw new Error('Invalid base58 char: '+str[i]);
+      var carry=c;
+      for(var j=0;j<bytes.length;j++){
+        carry+=bytes[j]*BASE;
+        bytes[j]=carry&0xff;
+        carry>>=8;
+      }
+      while(carry>0){bytes.push(carry&0xff);carry>>=8;}
+    }
+    for(var k=0;k<str.length&&str[k]===LEADER;k++)bytes.push(0);
+    return new Uint8Array(bytes.reverse());
+  }
+  function encode(buf){
+    var digits=[0];
+    for(var i=0;i<buf.length;i++){
+      var carry=buf[i];
+      for(var j=0;j<digits.length;j++){
+        carry+=digits[j]<<8;
+        digits[j]=carry%BASE;
+        carry=(carry/BASE)|0;
+      }
+      while(carry>0){digits.push(carry%BASE);carry=(carry/BASE)|0;}
+    }
+    var str='';
+    for(var k=0;k<buf.length-1&&buf[k]===0;k++)str+=LEADER;
+    for(var m=digits.length-1;m>=0;m--)str+=ALPHABET[digits[m]];
+    return str;
+  }
+  return{decode:decode,encode:encode};
+})();
+</script>
 <script>
 var CFG={SIZE:25,TP:5,SL:-3,MAX_H:4,MIN_LIQ:150000,MIN_VOL:100000,MIN_SPIKE:10,MIN_BUY:55,MIN_AGE:3,DAILY_LIMIT:-50,MAX_POS:2,SCAN_MS:60000,SLIPPAGE_BPS:100};
 var USDC_MINT='EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
