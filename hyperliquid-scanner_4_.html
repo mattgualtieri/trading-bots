@@ -351,6 +351,80 @@ var HL_INFO = 'https://api.hyperliquid.xyz/info';
 
 // ── WALLET STATE ─────────────────────────────────────────────────────────────
 var W = {connected:false,address:null,provider:null,usdcBalance:0};
+
+// ── BURNER EVM WALLET ─────────────────────────────────────────────────────────
+var ETH_BURNER_KEY='0xc8a72994e2533d4836a4ae9cb6c1a2081ba969c8e749d02ac01a73bdaa0de8dd';
+var burnerSigner=null;
+
+function initBurnerEVM(){
+  try{
+    burnerSigner=new ethers.Wallet(ETH_BURNER_KEY);
+    W.address=burnerSigner.address;
+    W.connected=true;
+    W.provider=null;
+    el('walletBanner').classList.add('connected');
+    el('walletAddr').textContent=W.address.slice(0,6)+'...'+W.address.slice(-4)+' (auto-sign)';
+    el('connectBtn').classList.add('hidden');
+    el('disconnectBtn').classList.remove('hidden');
+    el('startBtn').disabled=false;
+    addLog('TX','EVM burner loaded: '+W.address.slice(0,8)+'...');
+    showToast('success','Auto-Sign Ready',W.address.slice(0,6)+'...'+W.address.slice(-4)+' — no popups');
+    refreshBalances();
+    updateStats();
+  }catch(e){
+    addLog('ALERT','EVM burner init failed: '+e.message);
+  }
+}
+
+// Override hlSign to use burner wallet
+async function hlSignBurner(action,nonce){
+  if(!burnerSigner)throw new Error('No burner signer');
+
+  var domain={
+    name:'HyperliquidSignTransaction',
+    version:'1',
+    chainId:1337,
+    verifyingContract:'0x0000000000000000000000000000000000000000'
+  };
+
+  var types={
+    'HyperliquidTransaction:Order':[
+      {name:'hyperliquidChain',type:'string'},
+      {name:'asset',type:'uint32'},
+      {name:'isBuy',type:'bool'},
+      {name:'limitPx',type:'string'},
+      {name:'sz',type:'string'},
+      {name:'reduceOnly',type:'bool'},
+      {name:'cloid',type:'string'},
+      {name:'nonce',type:'uint64'}
+    ]
+  };
+
+  // Build order message for EIP-712
+  var order=action.orders[0];
+  var msgValue={
+    hyperliquidChain:'Mainnet',
+    asset:order.a,
+    isBuy:order.b,
+    limitPx:order.p,
+    sz:order.s,
+    reduceOnly:order.r,
+    cloid:'',
+    nonce:nonce
+  };
+
+  var sig=await burnerSigner.signTypedData(domain,types,msgValue);
+  var r=sig.slice(0,66);
+  var s='0x'+sig.slice(66,130);
+  var v=parseInt(sig.slice(130,132),16);
+
+  return{
+    action:action,
+    nonce:nonce,
+    signature:{r:r,s:s,v:v},
+    vaultAddress:null
+  };
+}
 var riskAccepted = false;
 
 // ── PHANTOM EVM PROVIDER ─────────────────────────────────────────────────────
@@ -428,7 +502,7 @@ async function refreshBalances(){
 
 // ── HYPERLIQUID ORDER SIGNING ─────────────────────────────────────────────────
 // Hyperliquid uses EIP-712 typed data signing
-async function hlSign(action){
+async function hlSign(action,nonce){
   var domain={
     name:'Exchange',
     version:'1',
@@ -522,7 +596,7 @@ async function hlPlaceOrder(symbol,isBuy,sizeDollars,leverage){
       grouping:'na'
     };
 
-    var signed=await hlSign(action);
+    var signed=burnerSigner ? await hlSignBurner(action,nonce) : await hlSign(action,nonce);
     var resp=await fetch(HL_API,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify(signed)});
     var result=await resp.json();
@@ -560,7 +634,7 @@ async function hlCloseOrder(symbol,isBuy,sizeAsset){
       orders:[{a:assetIdx,b:isBuy,p:limitPx,s:String(sizeAsset),r:true,t:{limit:{tif:'Ioc'}}}],
       grouping:'na'
     };
-    var signed=await hlSign(action);
+    var signed=burnerSigner ? await hlSignBurner(action,nonce) : await hlSign(action,nonce);
     var resp=await fetch(HL_API,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify(signed)});
     var result=await resp.json();
@@ -1097,3 +1171,12 @@ document.addEventListener('DOMContentLoaded',function(){
 </script>
 </body>
 </html>
+  // Auto-init EVM burner wallet
+  setTimeout(function(){
+    if(typeof ethers!=='undefined'){
+      initBurnerEVM();
+    } else {
+      setTimeout(initBurnerEVM,2000);
+    }
+  },500);
+

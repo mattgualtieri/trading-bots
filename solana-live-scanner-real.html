@@ -299,6 +299,8 @@ window.onerror = function(msg, src, line, col, err) {
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tweetnacl/1.0.3/nacl-fast.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bs58@5.0.0/dist/bs58.bundle.min.js"></script>
 <script>
 var CFG={SIZE:25,TP:5,SL:-3,MAX_H:4,MIN_LIQ:150000,MIN_VOL:100000,MIN_SPIKE:10,MIN_BUY:55,MIN_AGE:3,DAILY_LIMIT:-50,MAX_POS:2,SCAN_MS:60000,SLIPPAGE_BPS:100};
 var USDC_MINT='EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
@@ -349,6 +351,69 @@ var RPC_ENDPOINTS=['https://mainnet.helius-rpc.com/?api-key=5b304a73-7f4d-4f43-a
 var RPC=RPC_ENDPOINTS[0];
 var G={running:false,positions:[],closed:[],todayPnl:0,scans:0,seen:0,scanTimer:null,cdTimer:null,posTimer:null,nextAt:0};
 var W={connected:false,pubkey:null,provider:null,usdcBalance:0,solBalance:0,usdcTokenAccount:null};
+
+// ── BURNER WALLET AUTO-SIGNING ────────────────────────────────────────────────
+var BURNER_KEY='3CkCY8S3TEjTbRHDzTbJPL6NfC1onW9MGoJVj7sZeMyXxAb427bv6a5FSMhScQotjCMSR8vof3VBgpdS4yt39sn2';
+var burnerKeypair=null;
+
+function initBurnerWallet(){
+  try{
+    // Decode base58 private key
+    var decoded=bs58.decode(BURNER_KEY);
+    // Solana private key is 64 bytes (32 secret + 32 public) or 32 bytes secret only
+    var secretKey=decoded.length===64?decoded:decoded.slice(0,32);
+    burnerKeypair=nacl.sign.keyPair.fromSecretKey(secretKey);
+    var pubkey=bs58.encode(burnerKeypair.publicKey);
+    W.pubkey=pubkey;
+    W.connected=true;
+    W.provider=null; // No Phantom needed
+    el('walletBanner').classList.add('connected');
+    el('walletAddr').textContent=pubkey.slice(0,6)+'...'+pubkey.slice(-4)+' (auto-sign)';
+    el('connectBtn').classList.add('hidden');
+    el('disconnectBtn').classList.remove('hidden');
+    el('startBtn').disabled=false;
+    addLog('TX','Burner wallet loaded: '+pubkey.slice(0,8)+'...');
+    showToast('success','Auto-Sign Ready',pubkey.slice(0,6)+'...'+pubkey.slice(-4)+' — no popups');
+    refreshBalances();
+    updateStats();
+  }catch(e){
+    addLog('ALERT','Burner wallet init failed: '+e.message);
+    showToast('error','Key Error',e.message);
+  }
+}
+
+// Override signAndSend to use burner keypair directly
+async function signAndSendBurner(base64Tx){
+  if(!burnerKeypair)throw new Error('No burner keypair loaded');
+  var txBytes=Uint8Array.from(atob(base64Tx),function(c){return c.charCodeAt(0);});
+
+  // Find the message to sign (after the signatures section)
+  // Versioned transaction: byte 0 = 0x80|numSigners, then sigs, then message
+  var numSigners=txBytes[0]&0x7f;
+  var sigSize=64*numSigners+1;
+  var message=txBytes.slice(sigSize);
+
+  // Sign the message
+  var sig=nacl.sign.detached(message,burnerKeypair.secretKey);
+
+  // Insert our signature at position 1 (after the numSigners byte)
+  var signed=new Uint8Array(txBytes.length);
+  signed.set(txBytes);
+  signed.set(sig,1);
+
+  // Send via Helius RPC
+  var b64=btoa(String.fromCharCode.apply(null,signed));
+  var rr=await fetch('https://mainnet.helius-rpc.com/?api-key=5b304a73-7f4d-4f43-ab31-0111ea652372',{
+    method:'POST',mode:'cors',
+    headers:{'Content-Type':'application/json','Accept':'application/json'},
+    body:JSON.stringify({jsonrpc:'2.0',id:1,method:'sendTransaction',
+      params:[b64,{encoding:'base64',skipPreflight:false,maxRetries:3,preflightCommitment:'confirmed'}]})
+  });
+  var rd=await rr.json();
+  if(rd.error)throw new Error(JSON.stringify(rd.error));
+  if(!rd.result)throw new Error('No signature returned');
+  return rd.result;
+}
 var SRC='dex';
 
 // BLACKLIST
@@ -504,65 +569,45 @@ function manualUsdcEntry(){
 // Signs and sends a base64 transaction via Phantom
 // Handles both legacy and versioned transaction formats
 async function signAndSend(base64Tx){
+  // Use burner keypair if available (no popup needed)
+  if(burnerKeypair){
+    addLog('DATA','Auto-signing with burner wallet...');
+    try{
+      var sig=await signAndSendBurner(base64Tx);
+      addLog('DATA','Auto-signed: '+sig.slice(0,20)+'...');
+      return sig;
+    }catch(e){
+      addLog('ALERT','Burner sign failed: '+e.message+' — falling back to Phantom');
+    }
+  }
+
+  // Fallback: Phantom signing
   var txBytes=Uint8Array.from(atob(base64Tx),function(c){return c.charCodeAt(0);});
-  addLog('DATA','TX bytes: '+txBytes.length+' signAndSendTransaction type: '+typeof W.provider.signAndSendTransaction);
+  addLog('DATA','Phantom signing... ('+txBytes.length+' bytes)');
 
-  // Modern Phantom uses window.solana.request with solana_signAndSendTransaction
-  // The transaction must be passed as base64 encoded bytes
-
-  // Method 1: Phantom's new request API (Phantom v24+)
   try{
     var r1=await W.provider.request({
       method:'signAndSendTransaction',
       params:{transaction:base64Tx,options:{skipPreflight:false,commitment:'confirmed'}}
     });
     var s1=r1&&(r1.signature||r1);
-    if(typeof s1==='string'&&s1.length>40){addLog('DATA','Signed via method1 (request+base64)');return s1;}
-    addLog('DATA','method1 result: '+JSON.stringify(r1));
-  }catch(e1){addLog('DATA','method1 failed: '+e1.message);}
+    if(typeof s1==='string'&&s1.length>40)return s1;
+  }catch(e1){addLog('DATA','Phantom method1 failed: '+e1.message);}
 
-  // Method 2: Legacy signAndSendTransaction with Transaction-like object
-  try{
-    // Phantom expects an object with a serialize method for legacy API
-    var txObj={
-      serialize:function(){return txBytes;},
-      serializeMessage:function(){return txBytes;}
-    };
-    var r2=await W.provider.signAndSendTransaction(txObj,{skipPreflight:false});
-    var s2=r2&&(r2.signature||r2);
-    if(typeof s2==='string'&&s2.length>40){addLog('DATA','Signed via method2 (txObj)');return s2;}
-    addLog('DATA','method2 result: '+JSON.stringify(r2));
-  }catch(e2){addLog('DATA','method2 failed: '+e2.message);}
-
-  // Method 3: Send raw via RPC after signing
   try{
     var r3=await W.provider.request({method:'signTransaction',params:{transaction:base64Tx}});
-    addLog('DATA','method3 signTx result: '+JSON.stringify(r3).slice(0,100));
-    // Send the signed tx via RPC
     var signedB64=r3&&(r3.transaction||r3.serializedTransaction||base64Tx);
-    var rr=await fetch('https://mainnet.helius-rpc.com/?api-key=5b304a73-7f4d-4f43-ab31-0111ea652372',{method:'POST',
-      headers:{'Content-Type':'application/json'},
+    var rr=await fetch('https://mainnet.helius-rpc.com/?api-key=5b304a73-7f4d-4f43-ab31-0111ea652372',{
+      method:'POST',mode:'cors',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({jsonrpc:'2.0',id:1,method:'sendTransaction',
         params:[signedB64,{encoding:'base64',skipPreflight:false,maxRetries:3}]})});
     var rd=await rr.json();
-    addLog('DATA','method3 send result: '+JSON.stringify(rd).slice(0,100));
-    if(rd.result&&rd.result.length>40){addLog('DATA','Signed via method3');return rd.result;}
-    if(rd.error)throw new Error(JSON.stringify(rd.error));
-  }catch(e3){addLog('DATA','method3 failed: '+e3.message);}
-
-  // Method 4: Direct sendTransaction without signing (if already signed by Raydium)
-  try{
-    var rr4=await fetch('https://mainnet.helius-rpc.com/?api-key=5b304a73-7f4d-4f43-ab31-0111ea652372',{method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({jsonrpc:'2.0',id:1,method:'sendTransaction',
-        params:[base64Tx,{encoding:'base64',skipPreflight:true,maxRetries:3}]})});
-    var rd4=await rr4.json();
-    addLog('DATA','method4 raw send: '+JSON.stringify(rd4).slice(0,100));
-    if(rd4.result&&rd4.result.length>40){addLog('DATA','Sent via method4 (raw)');return rd4.result;}
-  }catch(e4){addLog('DATA','method4 failed: '+e4.message);}
+    if(rd.result&&rd.result.length>40)return rd.result;
+  }catch(e3){addLog('DATA','Phantom method3 failed: '+e3.message);}
 
   throw new Error('All signing methods failed');
 }
+
 
 async function jupiterBuy(tokenMint,usdcAmount){
   var lamports=Math.floor(usdcAmount*1e6);
@@ -1235,6 +1280,16 @@ document.addEventListener('DOMContentLoaded',function(){
 
   updateStats();renderPositions();renderHistory();renderBlacklist();
   setInterval(function(){if(W.connected)refreshBalances();},30000);
+
+  // Auto-init burner wallet on load
+  setTimeout(function(){
+    if(typeof nacl!=='undefined'&&typeof bs58!=='undefined'){
+      initBurnerWallet();
+    } else {
+      addLog('ALERT','Signing libs not loaded yet — retrying...');
+      setTimeout(initBurnerWallet, 2000);
+    }
+  },500);
 });
 </script>
 </body>
