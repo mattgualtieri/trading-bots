@@ -182,8 +182,13 @@
       <div class="wallet-bal" id="walletBal">Connect to see USDC balance</div>
       <div class="wallet-err" id="walletErr"></div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <button class="btn-wallet" id="connectBtn">Connect Phantom</button>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div id="evmKeyInputRow" class="hidden" style="display:flex;gap:6px;align-items:center">
+        <input id="evmBurnerKeyInput" type="password" placeholder="Paste EVM private key (0x...)..."
+          style="font-family:Space Mono,monospace;font-size:10px;padding:8px 12px;border-radius:5px;border:1px solid var(--purple);background:var(--bg);color:var(--purple);width:260px;outline:none;">
+        <button onclick="loadEVMBurnerFromInput()" style="font-family:Space Mono,monospace;font-size:10px;font-weight:700;padding:8px 14px;border-radius:5px;border:none;background:var(--purple);color:#000;cursor:pointer;text-transform:uppercase;">Load Key</button>
+      </div>
+      <button class="btn-wallet hidden" id="connectBtn">Connect Phantom</button>
       <button class="btn-wallet-disc hidden" id="disconnectBtn">Disconnect</button>
     </div>
   </div>
@@ -328,6 +333,7 @@
   </div>
 </div>
 
+<script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js" type="application/javascript"></script>
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 var CFG = {
@@ -353,8 +359,16 @@ var HL_INFO = 'https://api.hyperliquid.xyz/info';
 var W = {connected:false,address:null,provider:null,usdcBalance:0};
 
 // ── BURNER EVM WALLET ─────────────────────────────────────────────────────────
-var ETH_BURNER_KEY='0xc8a72994e2533d4836a4ae9cb6c1a2081ba969c8e749d02ac01a73bdaa0de8dd';
+var ETH_BURNER_KEY='';
 var burnerSigner=null;
+
+function loadEVMBurnerFromInput(){
+  var key=el('evmBurnerKeyInput').value.trim();
+  if(!key){showToast('error','No Key','Paste your EVM private key first.');return;}
+  ETH_BURNER_KEY=key;
+  el('evmKeyInputRow').classList.add('hidden');
+  initBurnerEVM();
+}
 
 function initBurnerEVM(){
   try{
@@ -1168,14 +1182,10 @@ document.addEventListener('DOMContentLoaded',function(){
 
   updateStats(); renderPositions(); renderHistory(); renderBlacklist();
 
-  // Auto-init EVM burner wallet
+  // Show key input on load
   setTimeout(function(){
-    if(typeof ethers!=='undefined'){
-      initBurnerEVM();
-    } else {
-      setTimeout(initBurnerEVM,2000);
-    }
-  },500);
+    el('evmKeyInputRow').classList.remove('hidden');
+  },300);
 });
 </script>
 </body>
