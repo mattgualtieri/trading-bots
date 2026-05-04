@@ -583,7 +583,7 @@ function showToast(type,title,msg,link){
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 var G = {
-  running:false, cash:100, startBal:100,
+  running:false, cash:0, startBal:0,
   positions:[], closed:[], todayPnl:0,
   scans:0, seen:0,
   scanTimer:null, cdTimer:null, posTimer:null, nextAt:0,
@@ -741,7 +741,7 @@ async function scan(){
     var pass = passes(m);
     var signal = getSignal(m);
     var held = G.positions.find(function(p){return p.symbol===m.symbol;});
-    var canTrade = pass && G.positions.length < CFG.MAX_POS && G.cash >= CFG.MARGIN && !held;
+    var canTrade = pass && G.positions.length < CFG.MAX_POS && (W.connected ? W.usdcBalance : 0) >= CFG.MARGIN && !held;
 
     var pills = Object.keys(f).map(function(k){
       return '<span class="pill '+(f[k]?'p':'f')+'">'+k+'</span>';
@@ -963,11 +963,20 @@ function renderHistory(){
 function updateStats(){
   var exposure = G.positions.reduce(function(s,p){return s+p.exposure;},0);
   var unrealised = G.positions.reduce(function(s,p){return s+p.margin*(p.pnlPct/100);},0);
-  var port = G.cash + G.positions.reduce(function(s,p){return s+p.margin;},0) + unrealised;
-  var chg  = port - G.startBal, chgP = (chg/G.startBal)*100;
-  var pv   = el('sPort'); pv.textContent='$'+port.toFixed(2); pv.className='cval '+(chg>=0?'g':'r');
-  el('sPortChg').textContent=(chg>=0?'+':'')+'$'+chg.toFixed(2)+' ('+chgP.toFixed(2)+'%)';
-  el('sCash').textContent='$'+G.cash.toFixed(2);
+  // Use real wallet balance if connected, else 0
+  var realBal = W.connected ? W.usdcBalance : 0;
+  var port = realBal + unrealised;
+  var chg = G.todayPnl;
+  var pv = el('sPort');
+  if(!W.connected){
+    pv.textContent='—'; pv.className='cval n';
+    el('sPortChg').textContent='Connect wallet';
+    el('sCash').textContent='—';
+  } else {
+    pv.textContent='$'+port.toFixed(2); pv.className='cval '+(chg>=0?'g':'r');
+    el('sPortChg').textContent=(chg>=0?'+':'')+'$'+chg.toFixed(2)+' today';
+    el('sCash').textContent='$'+(realBal - G.positions.reduce(function(s,p){return s+p.margin;},0)).toFixed(2);
+  }
   var pp=el('sPnl'); pp.textContent=(G.todayPnl>=0?'+':'')+'$'+G.todayPnl.toFixed(2);
   pp.className='cval '+(G.todayPnl>=0?'g':G.todayPnl<=-15?'r':'n');
   el('sPnlSub').textContent='Limit: -$20 ('+Math.min(100,Math.abs(G.todayPnl/20*100)).toFixed(0)+'% used)';
