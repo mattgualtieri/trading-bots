@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solana Momentum Scalper — Real USDC</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#080c10;--sur:#0d1117;--sur2:#131920;--bdr:#1e2d3d;--acc:#00ff88;--acc2:#00c4ff;--red:#ff4455;--warn:#ffaa00;--txt:#e2e8f0;--mut:#4a6070;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--txt);font-family:'Space Mono',monospace;min-height:100vh;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,136,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,136,.015) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+  .wrap{max-width:1400px;margin:0 auto;padding:24px;position:relative;z-index:1;}
+  .hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:18px;border-bottom:1px solid var(--bdr);}
+  .logo{display:flex;align-items:center;gap:12px;}
+  .logo-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--acc),var(--acc2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .logo-text{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;}
+  .logo-text span{color:var(--acc);}
+  .badge{font-size:10px;padding:3px 10px;border-radius:4px;letter-spacing:1px;font-weight:700;margin-left:6px;}
+  .blive{background:rgba(255,68,85,.15);border:1px solid rgba(255,68,85,.4);color:var(--red);}
+  .breal{background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.4);color:var(--acc);}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--mut);}
+  .dot.on{background:var(--acc);box-shadow:0 0 8px var(--acc);animation:db 2s infinite;}
+  .dot.off{background:var(--warn);}
+  @keyframes db{0%,100%{opacity:1}50%{opacity:.3}}
+  .wallet-banner{background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:20px 24px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+  .wallet-banner.connected{border-color:rgba(0,255,136,.3);background:rgba(0,255,136,.03);}
+  .wallet-info{display:flex;flex-direction:column;gap:4px;}
+  .wallet-label{font-size:9px;color:var(--mut);letter-spacing:1px;text-transform:uppercase;}
+  .wallet-addr{font-size:13px;font-weight:700;color:var(--acc);}
+  .wallet-bal{font-size:11px;color:var(--txt);}
+  .wallet-bal span{color:var(--acc2);}
+  .wallet-actions{display:flex;gap:8px;align-items:center;}
+  .btn-wallet{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;padding:10px 20px;border-radius:6px;border:none;cursor:pointer;text-transform:uppercase;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#000;}
+  .btn-wallet-disc{background:transparent;border:1px solid var(--red);color:var(--red);font-family:'Space Mono',monospace;font-size:10px;font-weight:700;padding:8px 14px;border-radius:5px;cursor:pointer;text-transform:uppercase;}
+  .wallet-err{font-size:10px;color:var(--red);margin-top:4px;}
+  .hidden{display:none!important;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+  .modal-overlay.hidden{display:none;}
+  .modal{background:var(--sur);border:1px solid rgba(255,68,85,.4);border-radius:12px;padding:32px;max-width:520px;width:90%;}
+  .modal h2{font-family:'Syne',sans-serif;font-size:20px;color:var(--red);margin-bottom:16px;}
+  .modal p{font-size:11px;color:var(--txt);line-height:1.9;margin-bottom:12px;}
+  .modal ul{font-size:11px;color:var(--mut);line-height:2.2;padding-left:16px;margin-bottom:20px;}
+  .modal ul li{color:var(--txt);}
+  .modal ul li span{color:var(--red);}
+  .modal-btns{display:flex;gap:10px;}
+  .modal-confirm{flex:1;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;padding:11px;border-radius:6px;border:none;cursor:pointer;background:var(--red);color:#fff;text-transform:uppercase;letter-spacing:1px;}
+  .modal-confirm:disabled{background:var(--mut);cursor:not-allowed;}
+  .modal-cancel{flex:1;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;padding:11px;border-radius:6px;border:1px solid var(--bdr);background:transparent;color:var(--mut);cursor:pointer;text-transform:uppercase;}
+  .checkbox-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:10px;color:var(--mut);}
+  .checkbox-row input{accent-color:var(--red);width:14px;height:14px;}
+  .toast-stack{position:fixed;bottom:24px;right:24px;z-index:500;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+  .toast{background:var(--sur);border:1px solid var(--bdr);border-radius:8px;padding:12px 16px;font-size:10px;min-width:280px;max-width:360px;display:flex;align-items:flex-start;gap:10px;animation:slideIn .3s ease;pointer-events:all;}
+  .toast.success{border-color:rgba(0,255,136,.4);}
+  .toast.error{border-color:rgba(255,68,85,.4);}
+  .toast.pending{border-color:rgba(255,170,0,.4);}
+  .toast-icon{font-size:16px;flex-shrink:0;}
+  .toast-body{flex:1;}
+  .toast-title{font-weight:700;margin-bottom:2px;color:var(--txt);}
+  .toast-msg{color:var(--mut);line-height:1.6;}
+  .toast-link{color:var(--acc2);text-decoration:none;font-size:9px;}
+  @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+  .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px;}
+  .card{background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:16px;position:relative;overflow:hidden;}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--acc),transparent);opacity:.4;}
+  .card.warn::before{background:linear-gradient(90deg,var(--warn),transparent);}
+  .card.blue::before{background:linear-gradient(90deg,var(--acc2),transparent);}
+  .clabel{font-size:9px;color:var(--mut);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;}
+  .cval{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;line-height:1;}
+  .cval.g{color:var(--acc)}.cval.r{color:var(--red)}.cval.n{color:var(--txt)}.cval.b{color:var(--acc2);}
+  .csub{font-size:9px;color:var(--mut);margin-top:4px;}
+  .ctrl{display:flex;gap:10px;margin-bottom:12px;align-items:center;flex-wrap:wrap;}
+  .btn{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;padding:9px 18px;border-radius:6px;border:none;cursor:pointer;text-transform:uppercase;}
+  .btn-g{background:var(--acc);color:#000;}.btn-g:disabled{background:var(--mut);cursor:not-allowed;}
+  .btn-r{background:transparent;color:var(--red);border:1px solid var(--red);}.btn-r:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-s{background:transparent;color:var(--mut);border:1px solid var(--bdr);}
+  .src-row{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+  .src-lbl{font-size:10px;color:var(--mut);}
+  .src-btn{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;padding:6px 14px;border-radius:5px;border:1px solid var(--bdr);background:transparent;color:var(--mut);cursor:pointer;}
+  .src-btn.on{border-color:var(--acc);color:var(--acc);background:rgba(0,255,136,.08);}
+  .api-pill{font-size:10px;padding:5px 12px;border-radius:5px;border:1px solid var(--bdr);background:var(--sur2);color:var(--mut);}
+  .api-pill.ok{border-color:rgba(0,255,136,.3);color:var(--acc);}
+  .api-pill.err{border-color:rgba(255,68,85,.3);color:var(--red);}
+  .api-pill.load{color:var(--warn);}
+  .cdown{height:2px;background:var(--bdr);border-radius:1px;margin-bottom:16px;overflow:hidden;}
+  .cdown-fill{height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));transition:width 1s linear;}
+  .g2{display:grid;grid-template-columns:1fr 360px;gap:16px;margin-bottom:16px;}
+  .col{display:flex;flex-direction:column;gap:16px;}
+  .panel{background:var(--sur);border:1px solid var(--bdr);border-radius:10px;overflow:hidden;}
+  .ph{padding:12px 16px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:var(--sur2);}
+  .pt{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;}
+  .pb{font-size:10px;color:var(--acc);background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);padding:2px 8px;border-radius:4px;}
+  .pb.e{color:var(--red);background:rgba(255,68,85,.08);border-color:rgba(255,68,85,.2);}
+  .tbl{width:100%;border-collapse:collapse;font-size:11px;}
+  .tbl th{text-align:left;padding:9px 12px;color:var(--mut);font-size:9px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--bdr);font-weight:400;white-space:nowrap;}
+  .tbl td{padding:10px 12px;border-bottom:1px solid rgba(30,45,61,.4);vertical-align:middle;}
+  .tbl tr:last-child td{border-bottom:none;}
+  .tbl tr:hover td{background:rgba(255,255,255,.015);}
+  .tn{font-weight:700;font-size:12px;}.ta{color:var(--mut);font-size:9px;margin-top:1px;}
+  .pills{display:flex;gap:3px;flex-wrap:wrap;}
+  .pill{font-size:8px;padding:2px 5px;border-radius:3px;font-weight:700;}
+  .pill.p{background:rgba(0,255,136,.1);color:var(--acc);}
+  .pill.f{background:rgba(255,68,85,.1);color:var(--red);}
+  .abtn{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;padding:4px 10px;border-radius:4px;cursor:pointer;letter-spacing:.5px;text-transform:uppercase;}
+  .abtn-buy{background:rgba(0,255,136,.15);color:var(--acc);border:1px solid rgba(0,255,136,.3);}
+  .abtn-skip{background:transparent;color:var(--mut);border:1px solid var(--bdr);cursor:default;}
+  .empty{padding:28px;text-align:center;color:var(--mut);font-size:11px;}
+  .pos-list{padding:10px;display:flex;flex-direction:column;gap:8px;max-height:360px;overflow-y:auto;}
+  .pos-card{background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:12px;}
+  .pos-card.w{border-color:rgba(0,255,136,.3);}
+  .pos-card.l{border-color:rgba(255,68,85,.3);}
+  .pbar{height:3px;background:var(--bdr);border-radius:2px;overflow:hidden;margin-bottom:8px;}
+  .pbar-fill{height:100%;border-radius:2px;}
+  .sell-btn{width:100%;font-family:'Space Mono',monospace;font-size:9px;font-weight:700;padding:5px;border-radius:4px;border:1px solid var(--red);background:transparent;color:var(--red);cursor:pointer;}
+  .sell-btn:hover{background:rgba(255,68,85,.1);}
+  .no-pos{text-align:center;color:var(--mut);padding:24px;font-size:11px;}
+  .abox{padding:14px 16px;font-size:11px;line-height:1.8;min-height:80px;}
+  .log-box{height:180px;overflow-y:auto;padding:8px 14px;font-size:10px;}
+  .lr{display:flex;gap:8px;padding:2px 0;border-bottom:1px solid rgba(30,45,61,.2);}
+  .lt{color:var(--mut);min-width:56px;}.lk{min-width:44px;font-weight:700;}.lm{color:var(--txt);flex:1;}
+  .lk.BUY{color:var(--acc)}.lk.SELL{color:var(--acc2)}.lk.SCAN{color:var(--warn)}.lk.ALERT{color:var(--red)}.lk.TX{color:#a78bfa;}.lk.DATA{color:var(--mut);}
+  .htbl{width:100%;border-collapse:collapse;font-size:10px;}
+  .htbl th{text-align:left;padding:8px 12px;color:var(--mut);font-size:9px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--bdr);font-weight:400;}
+  .htbl td{padding:8px 12px;border-bottom:1px solid rgba(30,45,61,.35);}
+  .win{color:var(--acc);font-weight:700;}.loss{color:var(--red);font-weight:700;}
+  .rules{padding:14px;font-size:10px;line-height:2.1;color:var(--mut);}
+  .rules span{color:var(--txt);}.rules .g{color:var(--acc);}.rules .r{color:var(--red);}
+  .abtn-block{background:rgba(255,68,85,.08);color:var(--red);border:1px solid rgba(255,68,85,.2);margin-left:4px;}
+  .abtn-block:hover{background:rgba(255,68,85,.2);}
+  .blacklist-panel{padding:12px 16px;}
+  .blacklist-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(255,68,85,.1);border:1px solid rgba(255,68,85,.25);color:var(--red);font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;margin:3px;}
+  .blacklist-tag button{background:none;border:none;color:var(--red);cursor:pointer;font-size:11px;line-height:1;padding:0;}
+  .tx-link{color:var(--acc2);text-decoration:none;font-size:9px;margin-left:4px;}
+  .tx-link:hover{text-decoration:underline;}
+  ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:var(--sur);}::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:2px;}
+</style>
+</head>
+<body>
+<script>
+window.onerror = function(msg, src, line, col, err) {
+  console.error('JS ERROR:', msg, 'line:', line);
+  var box = document.getElementById('logBox');
+  if(box) {
+    var row = document.createElement('div');
+    row.className = 'lr';
+    row.innerHTML = '<span class="lt">ERROR</span><span class="lk ALERT">JS</span><span class="lm" style="color:var(--red)">' + msg + ' (line '+line+')</span>';
+    box.insertBefore(row, box.firstChild);
+  }
+};
+</script>
+
+<!-- RISK MODAL -->
+<div class="modal-overlay hidden" id="riskModal">
+  <div class="modal">
+    <h2>⚠️ Real Money Warning</h2>
+    <p>This bot executes <strong>real swaps on Solana mainnet</strong> using your actual USDC. Losses can happen instantly.</p>
+    <ul>
+      <li>Trades <span>$25 real USDC per position</span>, max 2 open ($50 at risk)</li>
+      <li>Targets <span>high-volatility memecoins</span> — can drop 90%+ instantly</li>
+      <li>Auto-buy fires <span>without confirmation</span> when filters pass</li>
+      <li>Slippage, MEV, and failed TXs are <span>real risks</span></li>
+      <li>You bear <span>all responsibility</span> for trading losses</li>
+    </ul>
+    <div class="checkbox-row">
+      <input type="checkbox" id="riskCheck">
+      <label for="riskCheck">I understand I may lose real money and accept all risks</label>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-cancel" id="riskCancelBtn">Cancel</button>
+      <button class="modal-confirm" id="riskConfirmBtn" disabled>I Accept — Connect Wallet</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST STACK -->
+<div class="toast-stack" id="toastStack"></div>
+
+<div class="wrap">
+  <div class="hdr">
+    <div class="logo">
+      <div class="logo-icon">&#9889;</div>
+      <div>
+        <div class="logo-text">Solana Momentum <span>Scalper</span></div>
+        <div style="font-size:10px;color:var(--mut);margin-top:2px">Live Market Data &middot; Real USDC Trading</div>
+      </div>
+      <span class="badge blive">&#9679; LIVE DATA</span>
+      <span class="badge breal">&#9679; REAL USDC</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="dot" id="dot"></div>
+      <span style="font-size:11px;color:var(--mut)" id="statusTxt">IDLE</span>
+    </div>
+  </div>
+
+  <!-- WALLET BANNER -->
+  <div class="wallet-banner" id="walletBanner">
+    <div class="wallet-info">
+      <div class="wallet-label">Phantom Wallet</div>
+      <div class="wallet-addr" id="walletAddr">Not connected</div>
+      <div class="wallet-bal" id="walletBal">Connect wallet to see balances</div>
+      <div class="wallet-err" id="walletErr"></div>
+    </div>
+    <div class="wallet-actions">
+      <button class="btn-wallet" id="connectBtn">Connect Phantom</button>
+      <button class="btn-wallet-disc hidden" id="refreshBalBtn" style="border-color:var(--acc2);color:var(--acc2)">&#8635; Refresh</button>
+      <button class="btn-wallet-disc hidden" id="pingBtn" style="border-color:var(--acc2);color:var(--acc2)">&#127757; Ping Raydium</button>
+      <button class="btn-wallet-disc hidden" id="testBuyBtn" style="border-color:var(--acc);color:var(--acc)">&#9654; Test Buy</button>
+      <button class="btn-wallet-disc hidden" id="debugBtn" style="border-color:var(--warn);color:var(--warn)">&#128030; Debug</button>
+      <button class="btn-wallet-disc hidden" id="disconnectBtn">Disconnect</button>
+    </div>
+  </div>
+
+  <div class="src-row">
+    <span class="src-lbl">Data source:</span>
+    <button class="src-btn" id="srcGecko">GeckoTerminal</button>
+    <button class="src-btn on" id="srcDex">DexScreener</button>
+    <button class="src-btn" id="srcSim">Simulated (offline)</button>
+    <div class="api-pill" id="apiPill">Not connected</div>
+  </div>
+
+  <div class="ctrl">
+    <button class="btn btn-g" id="startBtn" disabled>&#9654; Start Agent</button>
+    <button class="btn btn-r" id="stopBtn" disabled>&#9632; Stop</button>
+    <button class="btn btn-s" id="resetBtn">&#8635; Reset Stats</button>
+    <span style="font-size:10px;color:var(--mut);margin-left:auto" id="nextInfo">&#8212;</span>
+  </div>
+  <div class="cdown"><div class="cdown-fill" id="cdownFill" style="width:0"></div></div>
+
+  <div class="stats">
+    <div class="card"><div class="clabel">USDC Balance</div><div class="cval n" id="sPort">$0.00</div><div class="csub" id="sPortChg">Connect wallet</div></div>
+    <div class="card"><div class="clabel">Available USDC</div><div class="cval n" id="sCash">$0.00</div><div class="csub">Max 2 positions</div></div>
+    <div class="card warn"><div class="clabel">Today P&amp;L</div><div class="cval n" id="sPnl">$0.00</div><div class="csub" id="sPnlSub">Daily limit: -$50</div></div>
+    <div class="card"><div class="clabel">Win Rate</div><div class="cval n" id="sWin">&#8212;</div><div class="csub" id="sWinSub">0 trades closed</div></div>
+    <div class="card blue"><div class="clabel">Scans Run</div><div class="cval b" id="sScans">0</div><div class="csub" id="sSeen">0 tokens analysed</div></div>
+  </div>
+
+  <div class="g2">
+    <div class="col">
+      <div class="panel">
+        <div class="ph"><span class="pt">Live Token Scanner &mdash; Solana</span><span class="pb" id="scanBadge">WAITING</span></div>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr><th>Token</th><th>Price</th><th>24h Vol</th><th>Liquidity</th><th>1h Chg</th><th>5m Chg</th><th>Buys%</th><th>Filters</th><th>Action</th><th>Block</th></tr></thead>
+            <tbody id="tBody"><tr><td colspan="10" class="empty">Connect wallet to begin...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="pt">Strategy Analysis</span><span class="pb" id="aBadge">IDLE</span></div>
+        <div class="abox" id="aBox" style="color:var(--mut)">Reasoning appears here after each scan...</div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="pt">Activity Log</span><span style="font-size:10px;color:var(--mut)" id="logCnt">0 entries</span></div>
+        <div class="log-box" id="logBox"></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="panel">
+        <div class="ph"><span class="pt">Open Positions</span><span class="pb" id="posCnt">0 / 2</span></div>
+        <div class="pos-list" id="posList">
+          <div class="no-pos"><div style="font-size:22px;opacity:.3;margin-bottom:6px">&#128202;</div><div>No open positions</div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="pt">Strategy Rules</span></div>
+        <div class="rules">
+          <div>&#128208; Position size: <span>$25 USDC (real)</span></div>
+          <div>&#127919; Take profit: <span class="g">+5%</span></div>
+          <div>&#128737; Stop loss: <span class="r">-3%</span></div>
+          <div>&#9201; Max hold: <span>4 hours</span></div>
+          <div>&#128176; Min liquidity: <span>$75K</span></div>
+          <div>&#128197; Min token age: <span>3 days</span></div>
+          <div>&#128202; Min 24h vol: <span>$100K</span></div>
+          <div>&#128200; Vol spike: <span>+10% vs avg</span></div>
+          <div>&#128185; Buy ratio: <span>&gt;55%</span></div>
+          <div>&#128683; Daily loss limit: <span class="r">-$50</span></div>
+          <div>&#128260; Swap via: <span class="g">Jupiter v6</span></div>
+          <div>&#128200; Slippage: <span>1.0% BPS</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:16px">
+    <div class="ph"><span class="pt">Blacklisted Tokens</span><span class="pb" id="blacklistCount">0 tokens</span></div>
+    <div class="blacklist-panel" id="blacklistPanel">
+      <span style="font-size:10px;color:var(--mut)">No tokens blacklisted yet.</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ph"><span class="pt">Closed Trades</span><span class="pb" id="histCnt">0 trades</span></div>
+    <div style="overflow-x:auto">
+      <table class="htbl">
+        <thead><tr><th>Token</th><th>Entry</th><th>Exit</th><th>Size</th><th>P&amp;L $</th><th>P&amp;L %</th><th>Hold</th><th>Reason</th><th>Tx</th></tr></thead>
+        <tbody id="histBody"><tr><td colspan="9" class="empty">No closed trades yet</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+var CFG={SIZE:25,TP:5,SL:-3,MAX_H:4,MIN_LIQ:150000,MIN_VOL:100000,MIN_SPIKE:10,MIN_BUY:55,MIN_AGE:3,DAILY_LIMIT:-50,MAX_POS:2,SCAN_MS:60000,SLIPPAGE_BPS:100};
+var USDC_MINT='EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+// Swap aggregator endpoints — tries each until one works
+var SWAP_APIS=[
+  {
+    name:'Jupiter',
+    quote:function(inMint,outMint,amt,slipBps){
+      return 'https://quote-api.jup.ag/v6/quote?inputMint='+inMint+'&outputMint='+outMint+'&amount='+amt+'&slippageBps='+slipBps+'&onlyDirectRoutes=false&asLegacyTransaction=false';
+    },
+    swap:'https://quote-api.jup.ag/v6/swap',
+    quoteMethod:'GET',
+    parseQuote:function(d){return d.outAmount?d:null;},
+    buildSwapBody:function(quote,pubkey){
+      return {quoteResponse:quote,userPublicKey:pubkey,wrapAndUnwrapSol:true,
+        dynamicComputeUnitLimit:true,prioritizationFeeLamports:'auto',asLegacyTransaction:false};
+    },
+    parseTx:function(d){return d.swapTransaction||null;},
+    outAmount:function(q){return parseInt(q.outAmount)||0;},
+    outDecimals:function(q){return q.outputDecimals||6;},
+  },
+  {
+    name:'Raydium',
+    quote:function(inMint,outMint,amt,slipBps){
+      return 'https://transaction-v1.raydium.io/compute/swap-base-in?inputMint='+inMint+'&outputMint='+outMint+'&amount='+amt+'&slippage='+(slipBps/100);
+    },
+    swap:'https://transaction-v1.raydium.io/transaction/swap-base-in',
+    quoteMethod:'GET',
+    parseQuote:function(d){return (d.data&&d.data.outputAmount)?d.data:null;},
+    buildSwapBody:function(quote,pubkey){
+      return {inputMint:quote.inputMint,outputMint:quote.outputMint,
+        amount:quote.inputAmount,slippage:quote.slippage,
+        userPublicKey:pubkey,txVersion:'V0'};
+    },
+    parseTx:function(d){return (d.data&&d.data.transaction)||null;},
+    outAmount:function(q){return parseInt(q.outputAmount)||0;},
+    outDecimals:function(q){return 6;},
+  },
+];
+// Raydium API — confirmed working
+var RAY_QUOTE='https://transaction-v1.raydium.io/compute/swap-base-in';
+var RAY_SWAP='https://transaction-v1.raydium.io/transaction/swap-base-in';
+// Keep Jupiter as fallback
+var JUPITER_QUOTE='https://quote-api.jup.ag/v6/quote';
+var JUPITER_SWAP='https://quote-api.jup.ag/v6/swap';
+// All RPC calls go through local proxy (avoids CORS)
+var RPC_ENDPOINTS=[
+  'https://api.mainnet-beta.solana.com',
+];
+var RPC=RPC_ENDPOINTS[0];
+var G={running:false,positions:[],closed:[],todayPnl:0,scans:0,seen:0,scanTimer:null,cdTimer:null,posTimer:null,nextAt:0};
+var W={connected:false,pubkey:null,provider:null,usdcBalance:0,solBalance:0,usdcTokenAccount:null};
+var SRC='dex';
+
+// BLACKLIST
+var BLACKLIST={};
+try{BLACKLIST=JSON.parse(localStorage.getItem('scalper_bl')||'{}');}catch(e){}
+function saveBlacklist(){try{localStorage.setItem('scalper_bl',JSON.stringify(BLACKLIST));}catch(e){}}
+function blockToken(sym,addr){BLACKLIST[sym]=addr||'?';saveBlacklist();addLog('ALERT',sym+' blacklisted');renderBlacklist();}
+function unblockToken(sym){delete BLACKLIST[sym];saveBlacklist();renderBlacklist();}
+function renderBlacklist(){
+  var p=el('blacklistPanel'),c=Object.keys(BLACKLIST).length;
+  el('blacklistCount').textContent=c+' token'+(c!==1?'s':'');
+  if(!c){p.innerHTML='<span style="font-size:10px;color:var(--mut)">No tokens blacklisted yet.</span>';return;}
+  p.innerHTML=Object.keys(BLACKLIST).map(function(s){return'<span class="blacklist-tag">'+s+' <button class="unbtn" data-sym="'+s+'">&#10005;</button></span>';}).join('');
+}
+
+// RISK MODAL
+var riskAccepted=false;
+
+function getPhantomProvider(){
+  if(window.phantom&&window.phantom.solana&&window.phantom.solana.isPhantom) return window.phantom.solana;
+  if(window.solana&&window.solana.isPhantom) return window.solana;
+  return null;
+}
+
+async function connectWalletReal(){
+  await sleep(100);
+  var provider=getPhantomProvider();
+  if(!provider){
+    var msg='Phantom not detected. ';
+    if(location.protocol==='file:') msg+='Serve from localhost: python3 -m http.server 8080';
+    else msg+='Install Phantom from phantom.app then refresh.';
+    el('walletErr').textContent=msg;
+    showToast('error','Phantom Not Found',msg);
+    addLog('ALERT','Phantom not found — window.phantom='+!!window.phantom+' window.solana='+!!window.solana);
+    return;
+  }
+  el('walletErr').textContent='Connecting...';
+  try{
+    var resp=await provider.connect();
+    W.provider=provider;
+    W.pubkey=resp.publicKey.toString();
+    W.connected=true;
+    el('walletErr').textContent='';
+    el('walletBanner').classList.add('connected');
+    el('walletAddr').textContent=W.pubkey.slice(0,6)+'...'+W.pubkey.slice(-4);
+    el('connectBtn').classList.add('hidden');
+    el('refreshBalBtn').classList.remove('hidden');
+    el('pingBtn').classList.remove('hidden');
+    el('testBuyBtn').classList.remove('hidden');
+    el('debugBtn').classList.remove('hidden');
+    el('disconnectBtn').classList.remove('hidden');
+    el('startBtn').disabled=false;
+    addLog('TX','Phantom connected: '+W.pubkey.slice(0,8)+'...');
+    showToast('success','Wallet Connected',W.pubkey.slice(0,6)+'...'+W.pubkey.slice(-4));
+    await refreshBalances();
+    updateStats();
+  }catch(e){
+    var errMsg=e.message||String(e);
+    if(e.code===4001||errMsg.includes('rejected')||errMsg.includes('cancelled')){errMsg='You rejected the connection. Try again.';}
+    el('walletErr').textContent='Failed: '+errMsg;
+    addLog('ALERT','Wallet connect error (code='+e.code+'): '+errMsg);
+    showToast('error','Connection Failed',errMsg);
+  }
+}
+
+function disconnectWallet(){
+  if(G.running)stopAgent();
+  if(W.provider)try{W.provider.disconnect();}catch(e){}
+  W={connected:false,pubkey:null,provider:null,usdcBalance:0,solBalance:0};
+  el('walletBanner').classList.remove('connected');
+  el('walletAddr').textContent='Not connected';
+  el('walletBal').textContent='Connect wallet to see balances';
+  el('connectBtn').classList.remove('hidden');
+  el('refreshBalBtn').classList.add('hidden');
+  el('pingBtn').classList.add('hidden');
+  el('testBuyBtn').classList.add('hidden');
+  el('debugBtn').classList.add('hidden');
+  el('disconnectBtn').classList.add('hidden');
+  el('startBtn').disabled=true;
+  addLog('TX','Wallet disconnected');
+  updateStats();
+}
+
+async function refreshBalances(){
+  if(!W.connected||!W.pubkey)return;
+  el('walletBal').textContent='Fetching balances...';
+
+  // Try each RPC via the local proxy
+  var rpcs=[
+    'https://api.mainnet-beta.solana.com',  // QuickNode free
+    'https://api.mainnet-beta.solana.com',  // GetBlock free
+    'https://rpc.ankr.com/solana',  // Syndica free
+  ];
+
+  for(var i=0;i<rpcs.length;i++){
+    try{
+      addLog('DATA','Trying balance via proxy endpoint '+(i+1));
+      var r=await fetch(rpcs[i],{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({jsonrpc:'2.0',id:1,method:'getTokenAccountsByOwner',
+          params:[W.pubkey,{mint:USDC_MINT},{encoding:'jsonParsed'}]})
+      });
+      if(!r.ok){addLog('DATA','HTTP '+r.status+' from proxy '+(i+1));continue;}
+      var d=await r.json();
+      if(d.error){addLog('DATA','RPC error: '+JSON.stringify(d.error));continue;}
+      var accts=d.result&&d.result.value||[];
+      addLog('DATA','Found '+accts.length+' USDC token account(s)');
+      W.usdcBalance=0;
+      accts.forEach(function(a,j){
+        var ui=a.account&&a.account.data&&a.account.data.parsed&&
+               a.account.data.parsed.info&&a.account.data.parsed.info.tokenAmount&&
+               a.account.data.parsed.info.tokenAmount.uiAmount||0;
+        addLog('DATA','Account['+j+']: $'+ui+' USDC | addr: '+a.pubkey);
+        W.usdcBalance+=ui;
+        if(j===0&&a.pubkey)W.usdcTokenAccount=a.pubkey;
+      });
+      // SOL balance
+      var sr=await fetch(rpcs[i],{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({jsonrpc:'2.0',id:2,method:'getBalance',params:[W.pubkey]})});
+      var sd=await sr.json();
+      W.solBalance=(sd.result&&sd.result.value||0)/1e9;
+      renderWalletBal();
+      return;
+    }catch(e){addLog('DATA','Proxy '+(i+1)+' threw: '+e.message);}
+  }
+  addLog('ALERT','All balance proxies failed. Use manual entry.');
+  el('walletBal').innerHTML='<span style="color:var(--red)">Fetch failed</span> — '
+    +'<button onclick="manualUsdcEntry()" style="background:none;border:none;color:var(--acc2);cursor:pointer;font-size:11px;text-decoration:underline">Enter manually</button>';
+}
+function renderWalletBal(){
+  if(W.usdcBalance===0){
+    el('walletBal').innerHTML='<span style="color:var(--warn)">$0.00 USDC</span> &middot; '+W.solBalance.toFixed(4)+' SOL'
+      +' <span style="color:var(--mut);font-size:9px">— wrong account? Check Activity Log</span>';
+  } else {
+    el('walletBal').innerHTML='<span>$'+W.usdcBalance.toFixed(2)+' USDC</span> &middot; '+W.solBalance.toFixed(4)+' SOL';
+  }
+  if(W.solBalance<0.01){showToast('error','Low SOL for Fees','You need at least 0.01 SOL (~$1.50) to pay transaction fees. Buy SOL in Phantom first.');addLog('ALERT','Low SOL: '+W.solBalance.toFixed(5)+' — buy at least 0.01 SOL for fees');}
+  updateStats();
+}
+
+function manualUsdcEntry(){
+  var amt=prompt('Your USDC balance (e.g. 150):');
+  if(amt&&!isNaN(parseFloat(amt))){
+    W.usdcBalance=parseFloat(amt);
+    addLog('TX','Balance set manually: $'+W.usdcBalance);
+    renderWalletBal();
+  }
+}
+
+// JUPITER SWAPS
+// Signs and sends a base64 transaction via Phantom
+// Handles both legacy and versioned transaction formats
+async function signAndSend(base64Tx){
+  var txBytes=Uint8Array.from(atob(base64Tx),function(c){return c.charCodeAt(0);});
+  addLog('DATA','TX bytes: '+txBytes.length+' signAndSendTransaction type: '+typeof W.provider.signAndSendTransaction);
+
+  // Modern Phantom uses window.solana.request with solana_signAndSendTransaction
+  // The transaction must be passed as base64 encoded bytes
+
+  // Method 1: Phantom's new request API (Phantom v24+)
+  try{
+    var r1=await W.provider.request({
+      method:'signAndSendTransaction',
+      params:{transaction:base64Tx,options:{skipPreflight:false,commitment:'confirmed'}}
+    });
+    var s1=r1&&(r1.signature||r1);
+    if(typeof s1==='string'&&s1.length>40){addLog('DATA','Signed via method1 (request+base64)');return s1;}
+    addLog('DATA','method1 result: '+JSON.stringify(r1));
+  }catch(e1){addLog('DATA','method1 failed: '+e1.message);}
+
+  // Method 2: Legacy signAndSendTransaction with Transaction-like object
+  try{
+    // Phantom expects an object with a serialize method for legacy API
+    var txObj={
+      serialize:function(){return txBytes;},
+      serializeMessage:function(){return txBytes;}
+    };
+    var r2=await W.provider.signAndSendTransaction(txObj,{skipPreflight:false});
+    var s2=r2&&(r2.signature||r2);
+    if(typeof s2==='string'&&s2.length>40){addLog('DATA','Signed via method2 (txObj)');return s2;}
+    addLog('DATA','method2 result: '+JSON.stringify(r2));
+  }catch(e2){addLog('DATA','method2 failed: '+e2.message);}
+
+  // Method 3: Send raw via RPC after signing
+  try{
+    var r3=await W.provider.request({method:'signTransaction',params:{transaction:base64Tx}});
+    addLog('DATA','method3 signTx result: '+JSON.stringify(r3).slice(0,100));
+    // Send the signed tx via RPC
+    var signedB64=r3&&(r3.transaction||r3.serializedTransaction||base64Tx);
+    var rr=await fetch('https://api.mainnet-beta.solana.com',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({jsonrpc:'2.0',id:1,method:'sendTransaction',
+        params:[signedB64,{encoding:'base64',skipPreflight:false,maxRetries:3}]})});
+    var rd=await rr.json();
+    addLog('DATA','method3 send result: '+JSON.stringify(rd).slice(0,100));
+    if(rd.result&&rd.result.length>40){addLog('DATA','Signed via method3');return rd.result;}
+    if(rd.error)throw new Error(JSON.stringify(rd.error));
+  }catch(e3){addLog('DATA','method3 failed: '+e3.message);}
+
+  // Method 4: Direct sendTransaction without signing (if already signed by Raydium)
+  try{
+    var rr4=await fetch('https://api.mainnet-beta.solana.com',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({jsonrpc:'2.0',id:1,method:'sendTransaction',
+        params:[base64Tx,{encoding:'base64',skipPreflight:true,maxRetries:3}]})});
+    var rd4=await rr4.json();
+    addLog('DATA','method4 raw send: '+JSON.stringify(rd4).slice(0,100));
+    if(rd4.result&&rd4.result.length>40){addLog('DATA','Sent via method4 (raw)');return rd4.result;}
+  }catch(e4){addLog('DATA','method4 failed: '+e4.message);}
+
+  throw new Error('All signing methods failed');
+}
+
+async function jupiterBuy(tokenMint,usdcAmount){
+  var lamports=Math.floor(usdcAmount*1e6);
+  addLog('DATA','Trying Raydium quote...');
+
+  try{
+    // ── STEP 1: Raydium quote ──
+    var quoteUrl=RAY_QUOTE
+      +'?inputMint='+USDC_MINT
+      +'&outputMint='+tokenMint
+      +'&amount='+lamports
+      +'&slippageBps='+CFG.SLIPPAGE_BPS
+      +'&txVersion=V0';
+    var qr=await fetch(quoteUrl,{method:'GET',mode:'cors',headers:{'Accept':'application/json'}});
+    var quoteText=await qr.text();
+    addLog('DATA','Raydium quote status: '+qr.status+' bytes: '+quoteText.length);
+    if(!quoteText||quoteText.length<10)throw new Error('Empty quote response');
+    var quoteData=JSON.parse(quoteText);
+    if(!quoteData.success){
+      var msg=quoteData.msg||'';
+      if(msg.includes('INSUFFICIENT_LIQU')){
+        throw new Error('No Raydium liquidity for this token — skipping');
+      }
+      throw new Error('Raydium quote failed: '+JSON.stringify(quoteData).slice(0,100));
+    }
+    var quote=quoteData.data;
+    addLog('DATA','Raydium quote OK: out='+quote.outputAmount+' impact='+quote.priceImpactPct+'%');
+
+    // ── STEP 2: Build swap transaction ──
+    addLog('DATA','Building Raydium swap TX...');
+    var swapBody={
+        computeUnitPriceMicroLamports:'630000',
+        swapResponse:quoteData,
+        txVersion:'V0',
+        wallet:W.pubkey,
+        inputAccount:W.usdcTokenAccount||undefined,
+        wrapSol:true,
+        unwrapSol:true,
+    };
+    var sr=await fetch(RAY_SWAP,{method:'POST',mode:'cors',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify(swapBody)});
+    var swapText=await sr.text();
+    addLog('DATA','Raydium swap status: '+sr.status+' bytes: '+swapText.length);
+    if(!swapText||swapText.length<10)throw new Error('Empty swap response');
+    var swapData=JSON.parse(swapText);
+    if(!swapData.success)throw new Error('Raydium swap failed: '+JSON.stringify(swapData).slice(0,150));
+
+    // Extract transaction — Raydium returns array of txs
+    var txs=swapData.data;
+    if(!txs||!txs.length)throw new Error('No transactions in Raydium response');
+    var txB64=txs[0].transaction;
+    if(!txB64)throw new Error('No transaction field: '+JSON.stringify(txs[0]).slice(0,100));
+    addLog('DATA','Raydium TX built, sending to Phantom...');
+
+    // ── STEP 3: Sign and send ──
+    var sig=await signAndSend(txB64);
+    addLog('DATA','TX sent: '+sig);
+    await confirmTx(sig);
+
+    var outAmt=(parseInt(quote.outputAmount)||0)/1e9; // SOL=9dec, tokens vary
+    return{success:true,txSig:sig,outAmount:outAmt};
+
+  }catch(e){
+    addLog('ALERT','Raydium buy failed: '+e.message);
+    return{success:false,error:e.message};
+  }
+}
+
+async function jupiterSell(tokenMint,tokenAmount){
+  // Raydium sell: token → USDC
+  var rawAmt=Math.floor(tokenAmount*1e6);
+  addLog('DATA','Raydium sell quote: '+tokenAmount+' tokens → USDC');
+  try{
+    var quoteUrl=RAY_QUOTE
+      +'?inputMint='+tokenMint
+      +'&outputMint='+USDC_MINT
+      +'&amount='+rawAmt
+      +'&slippageBps='+CFG.SLIPPAGE_BPS
+      +'&txVersion=V0';
+    var qr=await fetch(quoteUrl,{method:'GET',mode:'cors',headers:{'Accept':'application/json'}});
+    var quoteData=JSON.parse(await qr.text());
+    if(!quoteData.success)throw new Error('Sell quote failed: '+JSON.stringify(quoteData).slice(0,100));
+    var quote=quoteData.data;
+    addLog('DATA','Sell quote OK: out='+quote.outputAmount+' USDC (raw)');
+
+    var sr=await fetch(RAY_SWAP,{method:'POST',mode:'cors',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify({
+        computeUnitPriceMicroLamports:'630000',
+        swapResponse:quoteData,
+        txVersion:'V0',
+        wallet:W.pubkey,
+        wrapSol:true,
+        unwrapSol:true,
+      })});
+    var swapData=JSON.parse(await sr.text());
+    if(!swapData.success)throw new Error('Sell swap failed: '+JSON.stringify(swapData).slice(0,100));
+
+    var txs=swapData.data;
+    if(!txs||!txs.length)throw new Error('No sell transactions returned');
+    var txB64=txs[0].transaction;
+    var sig=await signAndSend(txB64);
+    await confirmTx(sig);
+
+    var outUsdc=(parseInt(quote.outputAmount)||0)/1e6;
+    return{success:true,txSig:sig,outUsdc:outUsdc};
+  }catch(e){
+    addLog('ALERT','Raydium sell failed: '+e.message);
+    return{success:false,error:e.message};
+  }
+}
+
+async function confirmTx(sig){
+  for(var i=0;i<20;i++){
+    await sleep(2000);
+    var r=await fetch('https://api.mainnet-beta.solana.com',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({jsonrpc:'2.0',id:1,method:'getSignatureStatuses',params:[[sig]]})});
+    var d=await r.json();
+    var st=d.result&&d.result.value&&d.result.value[0];
+    if(st){if(st.err)throw new Error('TX failed');if(st.confirmationStatus==='confirmed'||st.confirmationStatus==='finalized')return;}
+  }
+  throw new Error('TX timeout');
+}
+
+// POSITIONS
+async function executeBuyReal(sym,price,addr,fullAddr){
+  if(!W.connected)return;
+  if(G.positions.length>=CFG.MAX_POS)return;
+  if(W.usdcBalance<CFG.SIZE){addLog('ALERT','Insufficient USDC: $'+W.usdcBalance.toFixed(2));return;}
+  if(G.positions.find(function(p){return p.symbol===sym;}))return;
+  if(!fullAddr){addLog('ALERT','No token address for '+sym);return;}
+
+  addLog('TX','BUY swap: '+sym+' $'+CFG.SIZE+' USDC via Jupiter...');
+  showToast('pending','Buying '+sym,'Swapping $'+CFG.SIZE+' USDC on Jupiter...');
+
+  var result=await jupiterBuy(fullAddr,CFG.SIZE);
+  if(!result.success){
+    addLog('ALERT','BUY FAILED '+sym+': '+result.error);
+    showToast('error','Buy Failed '+sym,result.error);
+    return;
+  }
+
+  G.positions.push({id:Date.now()+Math.random(),symbol:sym,address:addr,fullAddr:fullAddr,
+    entryPrice:price,size:CFG.SIZE,entryTime:Date.now(),pnlPct:0,
+    tokensReceived:result.outAmount,buyTx:result.txSig});
+
+  addLog('BUY','Bought '+sym+' | '+result.outAmount.toFixed(4)+' tokens | $'+CFG.SIZE+' USDC');
+  showToast('success','Bought '+sym,'$'+CFG.SIZE+' | '+result.outAmount.toFixed(4)+' tokens','https://solscan.io/tx/'+result.txSig);
+  await refreshBalances();
+  renderPositions();updateStats();
+}
+
+async function closePosReal(pos,reason){
+  if(!pos.tokensReceived||!pos.fullAddr){closePosLocal(pos,reason);return;}
+  addLog('TX','SELL: '+pos.symbol+' '+pos.tokensReceived.toFixed(4)+' tokens...');
+  showToast('pending','Selling '+pos.symbol,'Swapping tokens back to USDC...');
+  G.positions=G.positions.filter(function(p){return p.id!==pos.id;});
+
+  var result=await jupiterSell(pos.fullAddr,pos.tokensReceived);
+  if(!result.success){
+    addLog('ALERT','SELL FAILED '+pos.symbol+': '+result.error+' — removed from tracker, check wallet');
+    showToast('error','Sell Failed '+pos.symbol,result.error+'. Check wallet manually.');
+    await refreshBalances();renderPositions();updateStats();return;
+  }
+
+  var pnlD=result.outUsdc-pos.size,pnlP=(pnlD/pos.size)*100;
+  G.todayPnl+=pnlD;
+  var held=Math.round((Date.now()-pos.entryTime)/60000);
+  G.closed.push({symbol:pos.symbol,entryPrice:pos.entryPrice,exitPrice:pos.entryPrice*(1+pnlP/100),
+    size:pos.size,pnlDollar:pnlD,pnlPct:pnlP,reason:reason,heldMin:held,txSig:result.txSig});
+
+  addLog('SELL','Sold '+pos.symbol+' | '+(pnlD>=0?'+':'')+'$'+pnlD.toFixed(2)+' ('+pnlP.toFixed(1)+'%) | '+reason);
+  showToast(pnlD>=0?'success':'error','Sold '+pos.symbol,(pnlD>=0?'+':'')+'$'+pnlD.toFixed(2)+' ('+pnlP.toFixed(1)+'%)','https://solscan.io/tx/'+result.txSig);
+  await refreshBalances();renderHistory();renderPositions();updateStats();
+}
+
+function closePosLocal(pos,reason){
+  var pnl=pos.size*(pos.pnlPct/100);
+  G.todayPnl+=pnl;
+  var held=Math.round((Date.now()-pos.entryTime)/60000);
+  G.positions=G.positions.filter(function(p){return p.id!==pos.id;});
+  G.closed.push({symbol:pos.symbol,entryPrice:pos.entryPrice,size:pos.size,pnlDollar:pnl,pnlPct:pos.pnlPct,reason:reason,heldMin:held,txSig:null});
+  addLog('SELL','Closed '+pos.symbol+' (local) | '+(pnl>=0?'+':'')+'$'+pnl.toFixed(2));
+  renderHistory();renderPositions();updateStats();
+}
+
+async function tickPositions(){
+  for(var i=0;i<G.positions.length;i++){
+    var pos=G.positions[i];
+    try{
+      if(pos.fullAddr&&SRC!=='sim'){
+        var r=await fetch('https://api.dexscreener.com/latest/dex/tokens/'+pos.fullAddr);
+        if(r.ok){var d=await r.json();var pr=d.pairs&&d.pairs[0];if(pr&&pr.priceUsd)pos.pnlPct=((parseFloat(pr.priceUsd)-pos.entryPrice)/pos.entryPrice)*100;}
+      } else pos.pnlPct+=(Math.random()*2)-0.8;
+    }catch(e){pos.pnlPct+=(Math.random()*1.4)-0.6;}
+    var hrs=(Date.now()-pos.entryTime)/3600000;
+    if(pos.pnlPct>=CFG.TP){await closePosReal(pos,'TAKE_PROFIT');break;}
+    if(pos.pnlPct<=CFG.SL){await closePosReal(pos,'STOP_LOSS');break;}
+    if(hrs>=CFG.MAX_H){await closePosReal(pos,'TIME_STOP');break;}
+  }
+  renderPositions();
+}
+
+async function manualSell(id){
+  var pos=G.positions.find(function(p){return p.id===id;});
+  if(pos)await closePosReal(pos,'MANUAL');
+}
+
+// DATA FEEDS
+// Full pool of 80+ search terms — a random subset is picked each scan
+var DEX_QUERY_POOL=[
+  // Base endpoints (always included)
+  'https://api.dexscreener.com/latest/dex/pairs/solana',
+  // Meme / culture
+  'ai','agent','neural','agi','gpt','llm','bot','robot','cyber','matrix',
+  'pepe','doge','shib','floki','wojak','chad','based','cope','shill','moon',
+  'pump','dump','rug','gem','send','wagmi','ngmi','gm','wen','ser',
+  'dog','cat','frog','rat','bear','bull','ape','monkey','goat','pig',
+  'baby','mini','nano','micro','mega','ultra','super','hyper','turbo','rocket',
+  'fire','ice','dark','shadow','ghost','skull','death','zombie','alien','ufo',
+  'sol','solana','jup','ray','bonk','wif','myro','bome','book','slerf',
+  'meme','viral','trend','hype','fomo','degen','alpha','sigma','king','lord',
+  'trump','elon','musk','grok','sam','satoshi','nakamoto','vitalik','buterin',
+  'dao','defi','nft','web3','meta','omni','poly','multi','cross','bridge',
+  'fast','quick','swift','flash','blaze','burst','surge','spike','blast','boom',
+  'rich','wealth','profit','gains','money','cash','coin','token','gem','100x',
+].map(function(q){
+  return q.startsWith('http') ? q : 'https://api.dexscreener.com/latest/dex/search?q='+encodeURIComponent(q)+'+solana';
+});
+
+// Pick a random subset each scan — always include the base pairs endpoint + 14 random terms
+function getRandomQueries(){
+  var base=['https://api.dexscreener.com/latest/dex/pairs/solana'];
+  var pool=DEX_QUERY_POOL.filter(function(q){return q!==base[0];});
+  // Shuffle pool
+  for(var i=pool.length-1;i>0;i--){
+    var j=Math.floor(Math.random()*(i+1));
+    var tmp=pool[i];pool[i]=pool[j];pool[j]=tmp;
+  }
+  return base.concat(pool.slice(0,14)); // 1 base + 14 random = 15 queries per scan
+}
+
+async function fetchDex(){
+  setApi('load','Scanning DexScreener...');
+  var queries=getRandomQueries();
+  var all=[],seen={};
+  addLog('SCAN','DexScreener: '+queries.length+' queries this scan');
+  for(var i=0;i<queries.length;i++){
+    try{
+      setApi('load','DexScreener '+(i+1)+'/'+queries.length+'...');
+      var r=await fetch(queries[i]);
+      if(!r.ok)continue;
+      var d=await r.json();
+      var before=all.length;
+      (d.pairs||[]).forEach(function(p){var k=p.pairAddress||'';if(k&&!seen[k]){seen[k]=1;all.push(p);}});
+      if(i<queries.length-1)await sleep(200);
+    }catch(e){continue;}
+  }
+  if(!all.length){setApi('err','DexScreener: no data');return[];}
+  setApi('ok','DexScreener: '+all.length+' raw pairs');
+  return parseDex(all);
+}
+
+function parseDex(pairs){
+  return pairs
+    .filter(function(p){return p.chainId==='solana'&&p.priceUsd&&p.liquidity&&p.volume&&p.baseToken&&p.baseToken.address;})
+    .map(function(p){
+      var a=p.baseToken.address;
+      var buys=(p.txns&&p.txns.h1)?p.txns.h1.buys||0:0;
+      var sells=(p.txns&&p.txns.h1)?p.txns.h1.sells||1:1;
+      var v24=p.volume.h24||0,v1=p.volume.h1||0;
+      return{symbol:p.baseToken.symbol||'???',address:a.slice(0,6)+'...'+a.slice(-4),fullAddr:a,
+        price:parseFloat(p.priceUsd)||0,liq:p.liquidity.usd||0,vol24:v24,
+        ch1h:(p.priceChange&&p.priceChange.h1)||0,ch5m:(p.priceChange&&p.priceChange.m5)||0,
+        buySell:(buys/(buys+sells))*100,spike:v24>0?((v1-v24/24)/(v24/24))*100:0,
+        ageDays:(Date.now()-(p.pairCreatedAt||0))/86400000,url:p.url||'',source:'DexScreener'};
+    })
+    .filter(function(t){return!BLACKLIST[t.symbol];})
+    .sort(function(a,b){return b.vol24-a.vol24;}).slice(0,500);
+}
+
+async function fetchGecko(){
+  setApi('load','GeckoTerminal...');
+  try{
+    var allData=[];
+    var sorts=['h24_volume_usd_liquidity_desc','h1_volume_usd_liquidity_desc','h6_volume_usd_liquidity_desc'];
+    for(var si=0;si<sorts.length;si++){
+      for(var pg=1;pg<=3;pg++){
+        try{
+          setApi('load','GeckoTerminal sort='+sorts[si]+' pg='+pg);
+          var r=await fetch('https://api.geckoterminal.com/api/v2/networks/solana/pools?page='+pg+'&sort='+sorts[si],{headers:{'Accept':'application/json;version=20230302'}});
+          if(!r.ok)continue;
+          var d=await r.json();
+          (d.data||[]).forEach(function(p){allData.push(p);});
+          await sleep(250);
+        }catch(e){continue;}
+      }
+    }
+    if(!allData.length)throw new Error('No data');
+    setApi('ok','GeckoTerminal: '+allData.length+' pools');
+    var seen={};
+    var deduped=allData.filter(function(p){if(seen[p.id])return false;seen[p.id]=1;return true;});
+    return deduped.map(function(pool){
+      var a=pool.attributes,created=a.pool_created_at?new Date(a.pool_created_at).getTime():0;
+      var addr=pool.relationships&&pool.relationships.base_token&&pool.relationships.base_token.data?pool.relationships.base_token.data.id.split('_')[1]||'':'';
+      var v24=parseFloat(a.volume_usd&&a.volume_usd.h24)||0,v1=parseFloat(a.volume_usd&&a.volume_usd.h1)||0;
+      var buys=(a.transactions&&a.transactions.h1)?a.transactions.h1.buys||0:0;
+      var sells=(a.transactions&&a.transactions.h1)?a.transactions.h1.sells||1:1;
+      return{symbol:a.name?a.name.split('/')[0].trim():'???',address:addr?addr.slice(0,6)+'...'+addr.slice(-4):'',
+        fullAddr:addr,price:parseFloat(a.base_token_price_usd)||0,liq:parseFloat(a.reserve_in_usd)||0,vol24:v24,
+        ch1h:parseFloat(a.price_change_percentage&&a.price_change_percentage.h1)||0,
+        ch5m:parseFloat(a.price_change_percentage&&a.price_change_percentage.m5)||0,
+        buySell:(buys/(buys+sells))*100,spike:v24>0?((v1-v24/24)/(v24/24))*100:0,
+        ageDays:created?(Date.now()-created)/86400000:999,
+        url:'https://www.geckoterminal.com/solana/pools/'+pool.id.split('_').pop(),source:'GeckoTerminal'};
+    }).filter(function(t){return t.price>0&&t.vol24>0&&!BLACKLIST[t.symbol]&&t.fullAddr;})
+      .sort(function(a,b){return b.vol24-a.vol24;}).slice(0,500);
+  }catch(e){setApi('err','GeckoTerminal: '+e.message);return[];}
+}
+
+var SIMPOOL=[{s:'GOAT',a:'CzLS...p8vW',fa:'CzLSujWBLFsSjncfkh5omSW4g1vkrNgNdSE3mFkJBPnh'},
+  {s:'AI16Z',a:'HeLp...9xmF',fa:'HeLp6NuQkmYB4pYWo2zYs22mESHXPQYzXbB8n4V98jwC'}];
+function fetchSim(){
+  setApi('ok','Simulated');
+  return Promise.resolve(SIMPOOL.map(function(t){
+    return{symbol:t.s,address:t.a,fullAddr:t.fa,
+      price:+(Math.random()*.1+.001).toFixed(6),liq:Math.floor(Math.random()*800000+75000),
+      vol24:Math.floor(Math.random()*1200000+100000),ch1h:+(Math.random()*24+1).toFixed(1),
+      ch5m:+(Math.random()*3).toFixed(2),buySell:+(Math.random()*24+56).toFixed(1),
+      spike:+(Math.random()*100+10).toFixed(1),ageDays:Math.floor(Math.random()*90+3),
+      url:'',source:'Simulated'};
+  }).filter(function(t){return!BLACKLIST[t.symbol];}));
+}
+
+function fetchTokens(){return SRC==='gecko'?fetchGecko():SRC==='dex'?fetchDex():fetchSim();}
+
+// FILTERS
+function runFilters(t){return{AGE:t.ageDays>=CFG.MIN_AGE,LIQ:t.liq>=CFG.MIN_LIQ,VOL:t.vol24>=CFG.MIN_VOL,SPIKE:t.spike>=CFG.MIN_SPIKE,PRICE:t.ch1h>=1&&t.ch1h<=30,BUYS:t.buySell>=CFG.MIN_BUY};}
+function passes(t){return Object.values(runFilters(t)).every(Boolean);}
+
+// SCAN
+async function scan(){
+  if(!G.running)return;
+  if(G.todayPnl<=CFG.DAILY_LIMIT){addLog('ALERT','Daily loss limit hit. Agent halted.');stopAgent();return;}
+  G.scans++;el('sScans').textContent=G.scans;
+  el('scanBadge').textContent='FETCHING...';el('aBadge').textContent='SCANNING...';
+  addLog('SCAN','Scan #'+G.scans+' ('+SRC+')');
+  await tickPositions();
+
+  var tokens=await fetchTokens();
+  if(!tokens.length){el('scanBadge').className='pb e';el('scanBadge').textContent='FAILED';return;}
+  el('scanBadge').className='pb';
+  G.seen+=tokens.length;el('sSeen').textContent=G.seen+' analysed';
+
+  var decisions=[],html='';
+  for(var i=0;i<tokens.length;i++){
+    var tok=tokens[i];
+    var f=runFilters(tok),pass=passes(tok);
+    var held=G.positions.find(function(p){return p.symbol===tok.symbol;});
+    var noUsdc=W.usdcBalance<CFG.SIZE;
+    var canBuy=pass&&G.positions.length<CFG.MAX_POS&&!noUsdc&&!held&&(W.connected||SRC==='sim');
+    var pills=Object.keys(f).map(function(k){return'<span class="pill '+(f[k]?'p':'f')+'">'+k+'</span>';}).join('');
+    var pc=tok.ch1h>=3?'var(--acc)':tok.ch1h<0?'var(--red)':'var(--warn)';
+    var pr=tok.price<0.001?tok.price.toFixed(6):tok.price<1?tok.price.toFixed(4):tok.price.toFixed(2);
+    var lnk=tok.url?'<a href="'+tok.url+'" target="_blank" style="color:var(--acc2);font-size:9px;margin-left:4px;text-decoration:none">&#8599;</a>':'';
+    var btnLabel=pass?(held?'HELD':noUsdc?'NO USDC':'LIMIT'):'SKIP';
+    html+='<tr><td><div class="tn">'+tok.symbol+lnk+'</div><div class="ta">'+tok.address+'</div></td>'
+      +'<td>$'+pr+'</td><td>$'+fmtK(tok.vol24)+'</td><td>$'+fmtK(tok.liq)+'</td>'
+      +'<td style="color:'+pc+'">'+(tok.ch1h>0?'+':'')+tok.ch1h.toFixed(1)+'%</td>'
+      +'<td style="color:'+(tok.ch5m>=0?'var(--acc)':'var(--red)')+'">'+(tok.ch5m>0?'+':'')+tok.ch5m.toFixed(2)+'%</td>'
+      +'<td style="color:'+(tok.buySell>=60?'var(--acc)':'var(--red)')+'">'+tok.buySell.toFixed(0)+'%</td>'
+      +'<td><div class="pills">'+pills+'</div></td>'
+      +'<td>'+(canBuy
+        ?'<button class="abtn abtn-buy" onclick="manualBuy(\''+tok.symbol+'\','+tok.price+',\''+tok.address+'\',\''+tok.fullAddr+'\')">BUY $75</button>'
+        :'<span class="abtn abtn-skip">'+btnLabel+'</span>')+'</td>'
+      +'<td><button class="abtn abtn-block" data-sym="'+tok.symbol+'" data-addr="'+tok.address+'">&#128683;</button></td></tr>';
+    if(canBuy&&Math.random()<0.80){
+      decisions.push({action:'BUY',symbol:tok.symbol});
+      (function(s,p,a,fa){setTimeout(function(){executeBuyReal(s,p,a,fa);},800);})(tok.symbol,tok.price,tok.address,tok.fullAddr);
+    } else decisions.push({action:pass?'WATCH':'SKIP',symbol:tok.symbol});
+  }
+
+  el('tBody').innerHTML=html||'<tr><td colspan="10" class="empty">No pairs passed filters</td></tr>';
+  var qual=tokens.filter(passes).length;
+  el('scanBadge').textContent=qual+' QUALIFIED / '+tokens.length+' SCANNED';
+  var buys=decisions.filter(function(d){return d.action==='BUY';});
+  addLog('SCAN','Scan done: '+qual+' qualified, '+buys.length+' buys');
+  el('aBox').style.color='var(--mut)';el('aBox').textContent='Analyzing...';
+  setTimeout(function(){
+    el('aBox').style.color='var(--txt)';
+    el('aBox').textContent=(buys.length
+      ?'Scan #'+G.scans+': Entering '+buys.map(function(b){return b.symbol;}).join(', ')+'. $'+(buys.length*CFG.SIZE)+' USDC deploying via Jupiter. USDC remaining: ~$'+(W.usdcBalance-buys.length*CFG.SIZE).toFixed(2)+'.'
+      :'Scan #'+G.scans+': '+tokens.length+' pairs. '+qual+' passed filters. No entries — conditions not met. USDC held: $'+W.usdcBalance.toFixed(2)+'.');
+    el('aBadge').textContent='COMPLETE';
+  },600);
+  await refreshBalances();updateStats();
+}
+
+// STATS
+function updateStats(){
+  var usdc=W.usdcBalance,pnl=G.todayPnl;
+  var pv=el('sPort');pv.textContent='$'+usdc.toFixed(2);pv.className='cval '+(pnl>=0?'g':'n');
+  el('sPortChg').textContent=(pnl>=0?'+':'')+'$'+pnl.toFixed(2)+' today';
+  el('sCash').textContent='$'+Math.max(0,usdc-G.positions.reduce(function(s,p){return s+p.size;},0)).toFixed(2);
+  var pp=el('sPnl');pp.textContent=(pnl>=0?'+':'')+'$'+pnl.toFixed(2);
+  pp.className='cval '+(pnl>=0?'g':pnl<=-40?'r':'n');
+  el('sPnlSub').textContent='Used: '+Math.min(100,Math.abs(pnl/50*100)).toFixed(0)+'% of limit';
+  var wins=G.closed.filter(function(t){return t.pnlDollar>0;}).length,tot=G.closed.length;
+  var wr=el('sWin');wr.textContent=tot?Math.round(wins/tot*100)+'%':'--';
+  wr.className='cval '+(tot?(wins/tot>=.5?'g':'r'):'n');
+  el('sWinSub').textContent=tot+' trades closed';
+}
+
+function renderPositions(){
+  el('posCnt').textContent=G.positions.length+' / 2';
+  if(!G.positions.length){el('posList').innerHTML='<div class="no-pos"><div style="font-size:22px;opacity:.3;margin-bottom:6px">&#128202;</div><div>No open positions</div></div>';return;}
+  el('posList').innerHTML=G.positions.map(function(pos){
+    var win=pos.pnlPct>=0,pnl=pos.size*(pos.pnlPct/100),hm=Math.round((Date.now()-pos.entryTime)/60000);
+    var prog=Math.min(100,Math.max(0,win?(pos.pnlPct/CFG.TP)*100:(Math.abs(pos.pnlPct)/Math.abs(CFG.SL))*100));
+    var col=win?'var(--acc)':'var(--red)';
+    var txLnk=pos.buyTx?'<a class="tx-link" href="https://solscan.io/tx/'+pos.buyTx+'" target="_blank">&#8599;tx</a>':'';
+    return'<div class="pos-card '+(win?'w':'l')+'">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-weight:700">'+pos.symbol+txLnk+'</span>'
+      +'<span style="font-family:Syne,sans-serif;font-size:15px;font-weight:700;color:'+col+'">'+(pnl>=0?'+':'')+'$'+pnl.toFixed(2)+'</span></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;font-size:9px;color:var(--mut);margin-bottom:8px">'
+      +'<span>Entry: $'+(pos.entryPrice<0.001?pos.entryPrice.toFixed(6):pos.entryPrice.toFixed(4))+'</span>'
+      +'<span style="color:'+col+'">'+pos.pnlPct.toFixed(2)+'%</span>'
+      +'<span>Held: '+hm+'m | '+pos.tokensReceived.toFixed(4)+' tokens</span><span>TP +5% / SL -3%</span></div>'
+      +'<div class="pbar"><div class="pbar-fill" style="width:'+prog+'%;background:'+col+'"></div></div>'
+      +'<button class="sell-btn" onclick="manualSell('+pos.id+')">SELL NOW (REAL TX)</button></div>';
+  }).join('');
+}
+
+function renderHistory(){
+  el('histCnt').textContent=G.closed.length+' trades';
+  if(!G.closed.length){el('histBody').innerHTML='<tr><td colspan="9" class="empty">No closed trades yet</td></tr>';return;}
+  var rm={TAKE_PROFIT:'Take Profit',STOP_LOSS:'Stop Loss',TIME_STOP:'Time Stop',MANUAL:'Manual'};
+  el('histBody').innerHTML=G.closed.slice().reverse().map(function(t){
+    var win=t.pnlDollar>=0,ep=t.entryPrice<0.001?t.entryPrice.toFixed(6):t.entryPrice.toFixed(4);
+    var xp=t.exitPrice||(t.entryPrice*(1+t.pnlPct/100));
+    var txCell=t.txSig?'<a class="tx-link" href="https://solscan.io/tx/'+t.txSig+'" target="_blank">solscan</a>':'--';
+    return'<tr><td style="font-weight:700">'+t.symbol+'</td><td>$'+ep+'</td>'
+      +'<td>$'+(xp<0.001?xp.toFixed(6):xp.toFixed(4))+'</td><td>$'+t.size+'</td>'
+      +'<td class="'+(win?'win':'loss')+'">'+(t.pnlDollar>=0?'+':'')+'$'+t.pnlDollar.toFixed(2)+'</td>'
+      +'<td class="'+(win?'win':'loss')+'">'+t.pnlPct.toFixed(2)+'%</td>'
+      +'<td>'+t.heldMin+'m</td><td>'+(rm[t.reason]||t.reason)+'</td>'
+      +'<td>'+txCell+'</td></tr>';
+  }).join('');
+}
+
+// TOASTS
+function showToast(type,title,msg,link){
+  var icons={success:'checkmark',error:'cross',pending:'clock'};
+  var stack=el('toastStack'),div=document.createElement('div');
+  div.className='toast '+type;
+  div.innerHTML='<div class="toast-icon">'+(type==='success'?'&#9989;':type==='error'?'&#10060;':'&#8987;')+'</div>'
+    +'<div class="toast-body"><div class="toast-title">'+title+'</div><div class="toast-msg">'+msg+'</div>'
+    +(link?'<a class="toast-link" href="'+link+'" target="_blank">View on Solscan &#8599;</a>':'')+'</div>';
+  stack.appendChild(div);
+  setTimeout(function(){if(div.parentNode)div.parentNode.removeChild(div);},type==='pending'?20000:6000);
+}
+
+// AGENT CONTROL
+function startAgent(){
+  if(!W.connected&&SRC!=='sim'){showToast('error','Not Connected','Connect Phantom first.');return;}
+  if(W.usdcBalance<CFG.SIZE&&SRC!=='sim'){showToast('error','Insufficient USDC','Need at least $'+CFG.SIZE+' USDC.');return;}
+  G.running=true;el('startBtn').disabled=true;el('stopBtn').disabled=false;
+  el('dot').className='dot on';el('statusTxt').textContent='RUNNING';
+  addLog('SCAN','Agent started — REAL USDC MODE');
+  scan();startCountdown();
+  G.scanTimer=setInterval(function(){scan();startCountdown();},CFG.SCAN_MS);
+  G.posTimer=setInterval(function(){if(G.positions.length){tickPositions();updateStats();}},30000);
+}
+function stopAgent(){
+  G.running=false;clearInterval(G.scanTimer);clearInterval(G.cdTimer);clearInterval(G.posTimer);
+  el('startBtn').disabled=false;el('stopBtn').disabled=true;
+  el('dot').className='dot off';el('statusTxt').textContent='PAUSED';
+  el('nextInfo').textContent='Paused';el('cdownFill').style.width='0';
+  addLog('SCAN','Agent stopped. '+G.positions.length+' positions open — monitor manually.');
+  if(G.positions.length)showToast('error','Agent Stopped',G.positions.length+' position(s) still open! Close manually if needed.');
+}
+function resetAll(){
+  stopAgent();G.positions=[];G.closed=[];G.todayPnl=0;G.scans=0;G.seen=0;
+  el('dot').className='dot';el('statusTxt').textContent='IDLE';
+  el('logBox').innerHTML='';el('logCnt').textContent='0 entries';
+  el('tBody').innerHTML='<tr><td colspan="10" class="empty">Start agent to begin...</td></tr>';
+  el('aBox').textContent='Reasoning appears here...';el('aBox').style.color='var(--mut)';
+  el('aBadge').textContent='IDLE';el('scanBadge').textContent='WAITING';
+  el('sScans').textContent='0';el('sSeen').textContent='0 tokens analysed';
+  setApi('','Not connected');renderPositions();renderHistory();updateStats();
+  if(W.connected)refreshBalances();
+}
+function startCountdown(){
+  clearInterval(G.cdTimer);G.nextAt=Date.now()+CFG.SCAN_MS;
+  G.cdTimer=setInterval(function(){
+    var rem=Math.max(0,G.nextAt-Date.now());
+    el('cdownFill').style.width=((CFG.SCAN_MS-rem)/CFG.SCAN_MS*100)+'%';
+    el('nextInfo').textContent='Next scan in '+Math.ceil(rem/1000)+'s';
+    if(rem<=0)clearInterval(G.cdTimer);
+  },1000);
+}
+
+// HELPERS
+function manualBuy(s,p,a,fa){executeBuyReal(s,p,a,fa);}
+function addLog(type,msg){
+  var t=new Date().toLocaleTimeString('en',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var box=el('logBox'),row=document.createElement('div');
+  row.className='lr';
+  row.innerHTML='<span class="lt">'+t+'</span><span class="lk '+type+'">'+type+'</span><span class="lm">'+msg+'</span>';
+  box.insertBefore(row,box.firstChild);
+  var cnt=el('logCnt');cnt.textContent=((parseInt(cnt.textContent)||0)+1)+' entries';
+}
+function setApi(s,m){var p=el('apiPill');p.className='api-pill '+s;p.textContent=m;}
+function el(id){return document.getElementById(id);}
+function fmtK(n){return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1000?Math.round(n/1000)+'K':n.toFixed(0);}
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+
+// DEBUG
+async function pingJupiter(){
+  addLog('DATA','Pinging Raydium directly from browser...');
+  try{
+    var url=RAY_QUOTE+'?inputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&outputMint=So11111111111111111111111111111111111111112&amount=1000000&slippageBps=100&txVersion=V0';
+    var r=await fetch(url,{method:'GET',mode:'cors',headers:{'Accept':'application/json'}});
+    var txt=await r.text();
+    addLog('DATA','Jupiter ping status: '+r.status+' bytes: '+txt.length);
+    addLog('DATA','Jupiter response: '+txt.slice(0,150));
+    if(txt.length>10&&txt!=='{}'){
+      showToast('success','Raydium Reachable!','Browser can reach Jupiter directly. Buys should work.');
+    } else {
+      showToast('error','Raydium Blocked','Response empty even from browser. WARP may not be working.');
+    }
+  }catch(e){
+    addLog('ALERT','Jupiter ping error: '+e.message);
+    showToast('error','Jupiter Unreachable',e.message);
+  }
+}
+
+async function debugBalance(){
+  var out=[];
+  out.push('=== BALANCE DEBUG ===');
+  out.push('Pubkey: '+W.pubkey);
+  out.push('USDC_MINT: '+USDC_MINT);
+
+  // Test direct fetch through proxy
+  var proxyRpcs=[
+    {label:'rpc1 (QuickNode)',url:'https://api.mainnet-beta.solana.com'},
+    {label:'rpc2 (GetBlock)',url:'https://api.mainnet-beta.solana.com'},
+    {label:'rpc3 (Syndica)',url:'https://rpc.ankr.com/solana'},
+  ];
+
+  for(var i=0;i<proxyRpcs.length;i++){
+    out.push('--- Test '+(i+1)+': '+proxyRpcs[i].label+' ---');
+    try{
+      var r=await fetch(proxyRpcs[i].url,{method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({jsonrpc:'2.0',id:1,method:'getTokenAccountsByOwner',
+          params:[W.pubkey,{mint:USDC_MINT},{encoding:'jsonParsed'}]})});
+      out.push('HTTP: '+r.status);
+      var d=await r.json();
+      if(d.error){out.push('ERROR: '+JSON.stringify(d.error));continue;}
+      var accts=d.result&&d.result.value||[];
+      out.push('USDC accounts: '+accts.length);
+      accts.forEach(function(a,j){
+        var info=a.account&&a.account.data&&a.account.data.parsed&&a.account.data.parsed.info;
+        out.push('  ['+j+'] amount='+JSON.stringify(info&&info.tokenAmount));
+      });
+    }catch(e){out.push('THREW: '+e.message);}
+  }
+
+  var txt=out.join('\n');
+  console.log(txt);
+  out.forEach(function(l){addLog('DATA',l);});
+  alert(txt);
+}
+
+// TEST BUY — uses Raydium (confirmed working on this network)
+async function testBuy(){
+  if(!W.connected){showToast('error','Not Connected','Connect wallet first.');return;}
+  var testMint='So11111111111111111111111111111111111111112';
+  var testAmount=1;
+  var lamports=Math.floor(testAmount*1e6);
+  addLog('TX','=== TEST BUY START (Raydium) ===');
+  showToast('pending','Test Buy Running','Step 1: Raydium quote...');
+  var quoteResp,txB64;
+  try{
+    addLog('DATA','Step 1: Raydium quote...');
+    var quoteUrl=RAY_QUOTE+'?inputMint='+USDC_MINT+'&outputMint='+testMint+'&amount='+lamports+'&slippageBps=100&txVersion=V0';
+    var qr=await fetch(quoteUrl,{method:'GET',mode:'cors',headers:{'Accept':'application/json'}});
+    addLog('DATA','Quote HTTP: '+qr.status);
+    var quoteText=await qr.text();
+    addLog('DATA','Quote raw: '+quoteText.slice(0,200));
+    if(!quoteText||quoteText.length<5){showToast('error','Test Failed','Empty response');return;}
+    quoteResp=JSON.parse(quoteText);
+    if(!quoteResp.success||!quoteResp.data){addLog('ALERT','Quote failed: '+JSON.stringify(quoteResp).slice(0,100));showToast('error','Test Failed — Quote',JSON.stringify(quoteResp).slice(0,100));return;}
+    addLog('TX','Step 1 PASSED ✓ out='+quoteResp.data.outputAmount+' lamports');
+  }catch(e){addLog('ALERT','Step 1 FAILED: '+e.message);showToast('error','Test Failed — Quote',e.message);return;}
+  try{
+    addLog('DATA','Step 2: Building swap TX...');
+    var sr=await fetch(RAY_SWAP,{method:'POST',mode:'cors',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify({
+        computeUnitPriceMicroLamports:'630000',
+        swapResponse:quoteResp,
+        txVersion:'V0',wallet:W.pubkey,
+        inputAccount:W.usdcTokenAccount||undefined,
+        wrapSol:true,unwrapSol:true})});
+    addLog('DATA','Swap HTTP: '+sr.status);
+    var swapText=await sr.text();
+    addLog('DATA','Swap raw: '+swapText.slice(0,150));
+    var swapResp=JSON.parse(swapText);
+    if(!swapResp.success||!swapResp.data||!swapResp.data.length){addLog('ALERT','Swap failed: '+JSON.stringify(swapResp).slice(0,150));showToast('error','Test Failed — Swap',JSON.stringify(swapResp).slice(0,100));return;}
+    txB64=swapResp.data[0].transaction;
+    addLog('TX','Step 2 PASSED ✓ TX built ('+txB64.length+' chars)');
+  }catch(e){addLog('ALERT','Step 2 FAILED: '+e.message);showToast('error','Test Failed — Swap',e.message);return;}
+  try{
+    addLog('DATA','Step 3: Phantom sign + send...');
+    var sig=await signAndSend(txB64);
+    addLog('TX','Step 3 PASSED ✓ TX sent: '+sig);
+    addLog('TX','=== ALL 3 STEPS PASSED ✓ Real buys work! ===');
+    showToast('success','Test Buy PASSED!','Raydium ✓  Swap build ✓  TX sent: '+sig.slice(0,20)+'...');
+  }catch(e){
+    if(e.code===4001||e.message.includes('rejected')){
+      addLog('TX','Rejected by user — steps 1 & 2 passed ✓');
+      showToast('success','Steps 1 & 2 Passed','Raydium works. You rejected sign — fine for a test.');
+    }else{addLog('ALERT','Step 3 FAILED: '+e.message);showToast('error','Test Failed — Sign',e.message);}
+  }
+}
+
+// INIT
+document.addEventListener('DOMContentLoaded',function(){
+  el('startBtn').addEventListener('click',startAgent);
+  el('stopBtn').addEventListener('click',stopAgent);
+  el('resetBtn').addEventListener('click',resetAll);
+  el('srcGecko').addEventListener('click',function(){SRC='gecko';el('srcGecko').className='src-btn on';el('srcDex').className='src-btn';el('srcSim').className='src-btn';});
+  el('srcDex').addEventListener('click',function(){SRC='dex';el('srcDex').className='src-btn on';el('srcGecko').className='src-btn';el('srcSim').className='src-btn';});
+  el('srcSim').addEventListener('click',function(){SRC='sim';el('srcSim').className='src-btn on';el('srcGecko').className='src-btn';el('srcDex').className='src-btn';setApi('ok','Simulated');el('startBtn').disabled=false;});
+
+  el('riskCheck').addEventListener('change',function(){el('riskConfirmBtn').disabled=!this.checked;});
+  el('riskConfirmBtn').addEventListener('click',function(){
+    if(!el('riskCheck').checked)return;
+    riskAccepted=true;el('riskModal').classList.add('hidden');connectWalletReal();
+  });
+  el('riskCancelBtn').addEventListener('click',function(){el('riskModal').classList.add('hidden');});
+
+  el('connectBtn').addEventListener('click',function(){
+    if(!riskAccepted){el('riskModal').classList.remove('hidden');}
+    else{connectWalletReal();}
+  });
+  el('disconnectBtn').addEventListener('click',disconnectWallet);
+  el('pingBtn').addEventListener('click',pingJupiter);
+  el('testBuyBtn').addEventListener('click',testBuy);
+  el('refreshBalBtn').addEventListener('click',function(){
+    addLog('DATA','Manual balance refresh');refreshBalances();
+  });
+  el('debugBtn').addEventListener('click',function(){
+    if(!W.connected){alert('Connect wallet first');return;}
+    debugBalance();
+  });
+
+  document.addEventListener('click',function(e){
+    if(e.target.classList.contains('abtn-block')){var s=e.target.getAttribute('data-sym'),a=e.target.getAttribute('data-addr');if(s)blockToken(s,a);}
+    if(e.target.classList.contains('unbtn')){var s=e.target.getAttribute('data-sym');if(s)unblockToken(s);}
+  });
+
+  setTimeout(function(){
+    var prov=getPhantomProvider();
+    if(prov&&prov.isConnected){riskAccepted=true;connectWalletReal();}
+  },500);
+
+  updateStats();renderPositions();renderHistory();renderBlacklist();
+  setInterval(function(){if(W.connected)refreshBalances();},30000);
+});
+</script>
+</body>
+</html>

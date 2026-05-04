@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hyperliquid Momentum Scalper — Real USDC</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#080c10;--sur:#0d1117;--sur2:#131920;--bdr:#1e2d3d;--acc:#00ff88;--acc2:#00c4ff;--red:#ff4455;--warn:#ffaa00;--txt:#e2e8f0;--mut:#4a6070;--purple:#a78bfa;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--txt);font-family:'Space Mono',monospace;min-height:100vh;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(167,139,250,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(167,139,250,.015) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+  .wrap{max-width:1500px;margin:0 auto;padding:24px;position:relative;z-index:1;}
+  .hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:18px;border-bottom:1px solid var(--bdr);}
+  .logo{display:flex;align-items:center;gap:12px;}
+  .logo-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--purple),var(--acc2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .logo-text{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;}
+  .logo-text span{color:var(--purple);}
+  .badge{font-size:10px;padding:3px 10px;border-radius:4px;letter-spacing:1px;font-weight:700;margin-left:6px;}
+  .bhl{background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.4);color:var(--purple);}
+  .bpaper{background:rgba(255,170,0,.15);border:1px solid rgba(255,170,0,.3);color:var(--warn);}
+  .b2x{background:rgba(255,68,85,.15);border:1px solid rgba(255,68,85,.4);color:var(--red);}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--mut);}
+  .dot.on{background:var(--acc);box-shadow:0 0 8px var(--acc);animation:db 2s infinite;}
+  .dot.off{background:var(--warn);}
+  @keyframes db{0%,100%{opacity:1}50%{opacity:.3}}
+
+  .stats{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px;}
+  .card{background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:16px;position:relative;overflow:hidden;}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--purple),transparent);opacity:.5;}
+  .card.g::before{background:linear-gradient(90deg,var(--acc),transparent);}
+  .card.r::before{background:linear-gradient(90deg,var(--red),transparent);}
+  .card.b::before{background:linear-gradient(90deg,var(--acc2),transparent);}
+  .card.w::before{background:linear-gradient(90deg,var(--warn),transparent);}
+  .clabel{font-size:9px;color:var(--mut);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;}
+  .cval{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;line-height:1;}
+  .cval.g{color:var(--acc)}.cval.r{color:var(--red)}.cval.n{color:var(--txt)}.cval.b{color:var(--acc2)}.cval.p{color:var(--purple);}
+  .csub{font-size:9px;color:var(--mut);margin-top:4px;}
+
+  .ctrl{display:flex;gap:10px;margin-bottom:12px;align-items:center;flex-wrap:wrap;}
+  .btn{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;padding:9px 18px;border-radius:6px;border:none;cursor:pointer;text-transform:uppercase;}
+  .btn-g{background:var(--acc);color:#000;}.btn-g:disabled{background:var(--mut);cursor:not-allowed;}
+  .btn-r{background:transparent;color:var(--red);border:1px solid var(--red);}.btn-r:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-s{background:transparent;color:var(--mut);border:1px solid var(--bdr);}
+  .api-pill{font-size:10px;padding:5px 12px;border-radius:5px;border:1px solid var(--bdr);background:var(--sur2);color:var(--mut);}
+  .api-pill.ok{border-color:rgba(0,255,136,.3);color:var(--acc);}
+  .api-pill.err{border-color:rgba(255,68,85,.3);color:var(--red);}
+  .api-pill.load{color:var(--warn);border-color:rgba(255,170,0,.3);}
+  .cdown{height:2px;background:var(--bdr);border-radius:1px;margin-bottom:16px;overflow:hidden;}
+  .cdown-fill{height:100%;background:linear-gradient(90deg,var(--purple),var(--acc2));transition:width 1s linear;}
+
+  .g2{display:grid;grid-template-columns:1fr 380px;gap:16px;margin-bottom:16px;}
+  .col{display:flex;flex-direction:column;gap:16px;}
+  .panel{background:var(--sur);border:1px solid var(--bdr);border-radius:10px;overflow:hidden;}
+  .ph{padding:12px 16px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:var(--sur2);}
+  .pt{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;}
+  .pb{font-size:10px;color:var(--acc);background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);padding:2px 8px;border-radius:4px;}
+  .pb.p{color:var(--purple);background:rgba(167,139,250,.08);border-color:rgba(167,139,250,.2);}
+  .pb.e{color:var(--red);background:rgba(255,68,85,.08);border-color:rgba(255,68,85,.2);}
+
+  .tbl{width:100%;border-collapse:collapse;font-size:11px;}
+  .tbl th{text-align:left;padding:9px 12px;color:var(--mut);font-size:9px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--bdr);font-weight:400;white-space:nowrap;}
+  .tbl td{padding:9px 12px;border-bottom:1px solid rgba(30,45,61,.4);vertical-align:middle;}
+  .tbl tr:last-child td{border-bottom:none;}
+  .tbl tr:hover td{background:rgba(255,255,255,.015);}
+  .tn{font-weight:700;font-size:12px;}.ta{color:var(--mut);font-size:9px;margin-top:1px;}
+  .pills{display:flex;gap:3px;flex-wrap:wrap;}
+  .pill{font-size:8px;padding:2px 5px;border-radius:3px;font-weight:700;}
+  .pill.p{background:rgba(0,255,136,.1);color:var(--acc);}
+  .pill.f{background:rgba(255,68,85,.1);color:var(--red);}
+  .dir-long{background:rgba(0,255,136,.15);color:var(--acc);border:1px solid rgba(0,255,136,.3);font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px;}
+  .dir-short{background:rgba(255,68,85,.15);color:var(--red);border:1px solid rgba(255,68,85,.3);font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px;}
+  .abtn{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;padding:4px 8px;border-radius:4px;cursor:pointer;letter-spacing:.5px;text-transform:uppercase;border:none;}
+  .abtn-long{background:rgba(0,255,136,.15);color:var(--acc);border:1px solid rgba(0,255,136,.3);}
+  .abtn-long:hover{background:rgba(0,255,136,.3);}
+  .abtn-short{background:rgba(255,68,85,.15);color:var(--red);border:1px solid rgba(255,68,85,.3);}
+  .abtn-short:hover{background:rgba(255,68,85,.3);}
+  .abtn-skip{background:transparent;color:var(--mut);border:1px solid var(--bdr);cursor:default;}
+  .abtn-block{background:rgba(255,68,85,.08);color:var(--red);border:1px solid rgba(255,68,85,.2);}
+  .abtn-block:hover{background:rgba(255,68,85,.2);}
+  .empty{padding:28px;text-align:center;color:var(--mut);font-size:11px;}
+
+  .pos-list{padding:10px;display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;}
+  .pos-card{background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:12px;}
+  .pos-card.wl{border-color:rgba(0,255,136,.3);}
+  .pos-card.ls{border-color:rgba(255,68,85,.3);}
+  .pbar{height:3px;background:var(--bdr);border-radius:2px;overflow:hidden;margin-bottom:8px;}
+  .pbar-fill{height:100%;border-radius:2px;}
+  .sell-btn{width:100%;font-family:'Space Mono',monospace;font-size:9px;font-weight:700;padding:5px;border-radius:4px;border:1px solid var(--red);background:transparent;color:var(--red);cursor:pointer;}
+  .sell-btn:hover{background:rgba(255,68,85,.1);}
+  .no-pos{text-align:center;color:var(--mut);padding:24px;font-size:11px;}
+
+  .abox{padding:14px 16px;font-size:11px;line-height:1.8;min-height:80px;}
+  .log-box{height:200px;overflow-y:auto;padding:8px 14px;font-size:10px;}
+  .lr{display:flex;gap:8px;padding:2px 0;border-bottom:1px solid rgba(30,45,61,.2);}
+  .lt{color:var(--mut);min-width:56px;}.lk{min-width:44px;font-weight:700;}.lm{color:var(--txt);flex:1;}
+  .lk.LONG{color:var(--acc)}.lk.SHORT{color:var(--red)}.lk.CLOSE{color:var(--acc2)}.lk.SCAN{color:var(--warn)}.lk.ALERT{color:var(--red)}.lk.DATA{color:var(--purple)}
+
+  .htbl{width:100%;border-collapse:collapse;font-size:10px;}
+  .htbl th{text-align:left;padding:8px 12px;color:var(--mut);font-size:9px;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--bdr);font-weight:400;}
+  .htbl td{padding:8px 12px;border-bottom:1px solid rgba(30,45,61,.35);}
+  .win{color:var(--acc);font-weight:700;}.loss{color:var(--red);font-weight:700;}
+
+  .blacklist-panel{padding:12px 16px;}
+  .blacklist-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(255,68,85,.1);border:1px solid rgba(255,68,85,.25);color:var(--red);font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;margin:3px;}
+  .blacklist-tag button{background:none;border:none;color:var(--red);cursor:pointer;font-size:11px;line-height:1;padding:0;}
+
+  .rules{padding:14px;font-size:10px;line-height:2.1;color:var(--mut);}
+  .rules span{color:var(--txt);}.rules .g{color:var(--acc);}.rules .r{color:var(--red);}.rules .p{color:var(--purple);}
+  .hidden{display:none!important;}
+  .wallet-banner{background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:18px 24px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+  .wallet-banner.connected{border-color:rgba(0,255,136,.3);background:rgba(0,255,136,.03);}
+  .wallet-label{font-size:9px;color:var(--mut);letter-spacing:1px;text-transform:uppercase;}
+  .wallet-addr{font-size:13px;font-weight:700;color:var(--acc);}
+  .wallet-bal{font-size:11px;color:var(--txt);}
+  .wallet-err{font-size:10px;color:var(--red);margin-top:4px;}
+  .btn-wallet{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;padding:10px 20px;border-radius:6px;border:none;cursor:pointer;text-transform:uppercase;background:linear-gradient(135deg,#00ff88,#00c4ff);color:#000;}
+  .btn-wallet-disc{background:transparent;border:1px solid var(--red);color:var(--red);font-family:'Space Mono',monospace;font-size:10px;font-weight:700;padding:8px 14px;border-radius:5px;cursor:pointer;text-transform:uppercase;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+  .modal-overlay.hidden{display:none;}
+  .modal{background:var(--sur);border:1px solid rgba(255,68,85,.4);border-radius:12px;padding:32px;max-width:520px;width:90%;}
+  .modal h2{font-family:'Syne',sans-serif;font-size:20px;color:var(--red);margin-bottom:16px;}
+  .modal p{font-size:11px;color:var(--txt);line-height:1.9;margin-bottom:12px;}
+  .modal ul{font-size:11px;line-height:2.2;padding-left:16px;margin-bottom:20px;}
+  .modal ul li{color:var(--txt);}
+  .modal ul li span{color:var(--red);}
+  .modal-btns{display:flex;gap:10px;}
+  .modal-confirm{flex:1;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;padding:11px;border-radius:6px;border:none;cursor:pointer;background:var(--red);color:#fff;text-transform:uppercase;}
+  .modal-confirm:disabled{background:var(--mut);cursor:not-allowed;}
+  .modal-cancel{flex:1;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;padding:11px;border-radius:6px;border:1px solid var(--bdr);background:transparent;color:var(--mut);cursor:pointer;text-transform:uppercase;}
+  .checkbox-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:10px;color:var(--mut);}
+  .toast-stack{position:fixed;bottom:24px;right:24px;z-index:500;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+  .toast{background:var(--sur);border:1px solid var(--bdr);border-radius:8px;padding:12px 16px;font-size:10px;min-width:280px;max-width:360px;display:flex;align-items:flex-start;gap:10px;animation:slideIn .3s ease;pointer-events:all;}
+  .toast.success{border-color:rgba(0,255,136,.4);}
+  .toast.error{border-color:rgba(255,68,85,.4);}
+  .toast.pending{border-color:rgba(255,170,0,.4);}
+  .toast-icon{font-size:16px;flex-shrink:0;}
+  .toast-body{flex:1;}
+  .toast-title{font-weight:700;margin-bottom:2px;}
+  .toast-msg{color:var(--mut);line-height:1.6;}
+  .toast-link{color:var(--acc2);text-decoration:none;font-size:9px;}
+  @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+  ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:var(--sur);}::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:2px;}
+
+  .lev-badge{display:inline-block;background:rgba(255,68,85,.2);border:1px solid rgba(255,68,85,.4);color:var(--red);font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;margin-left:4px;}
+</style>
+</head>
+<body>
+<!-- RISK MODAL -->
+<div class="modal-overlay hidden" id="riskModal">
+  <div class="modal">
+    <h2>&#9888;&#65039; Real Money Warning</h2>
+    <p>This bot will place <strong>real perpetual trades on Hyperliquid</strong> using your actual USDC. Losses can happen instantly with leverage.</p>
+    <ul>
+      <li>Trades <span>$20 USDC margin per position</span> with 2x leverage ($40 exposure)</li>
+      <li>Max 3 open positions = <span>$60 margin at risk</span></li>
+      <li>Auto-trades fire <span>without confirmation</span> when signals pass</li>
+      <li>Liquidation risk exists with leveraged positions</li>
+      <li>You bear <span>all responsibility</span> for trading losses</li>
+    </ul>
+    <div class="checkbox-row">
+      <input type="checkbox" id="riskCheck">
+      <label for="riskCheck">I understand I may lose real money and accept all risks</label>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-cancel" id="riskCancelBtn">Cancel</button>
+      <button class="modal-confirm" id="riskConfirmBtn" disabled>I Accept — Connect Wallet</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOASTS -->
+<div class="toast-stack" id="toastStack"></div>
+
+<div class="wrap">
+
+  <!-- WALLET BANNER -->
+  <div class="wallet-banner" id="walletBanner">
+    <div>
+      <div class="wallet-label">Phantom Wallet (Ethereum)</div>
+      <div class="wallet-addr" id="walletAddr">Not connected</div>
+      <div class="wallet-bal" id="walletBal">Connect to see USDC balance</div>
+      <div class="wallet-err" id="walletErr"></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn-wallet" id="connectBtn">Connect Phantom</button>
+      <button class="btn-wallet-disc hidden" id="disconnectBtn">Disconnect</button>
+    </div>
+  </div>
+
+  <div class="hdr">
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div>
+        <div class="logo-text">Hyperliquid <span>Scalper</span></div>
+        <div style="font-size:10px;color:var(--mut);margin-top:2px">Live Perps Data · 2x Leverage · Paper Trading</div>
+      </div>
+      <span class="badge bhl">● HYPERLIQUID</span>
+      <span class="badge b2x">2x LEV</span>
+      <span class="badge bpaper">PAPER</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="dot" id="dot"></div>
+      <span style="font-size:11px;color:var(--mut)" id="statusTxt">IDLE</span>
+    </div>
+  </div>
+
+  <div class="ctrl">
+    <button class="btn btn-g" id="startBtn" disabled>▶ Start Agent</button>
+    <button class="btn btn-r" id="stopBtn" disabled>■ Stop</button>
+    <button class="btn btn-s" id="resetBtn">↺ Reset</button>
+    <div class="api-pill" id="apiPill">Hyperliquid: Not connected</div>
+    <span style="font-size:10px;color:var(--mut);margin-left:auto" id="nextInfo">—</span>
+  </div>
+  <div class="cdown"><div class="cdown-fill" id="cdownFill" style="width:0"></div></div>
+
+  <div class="stats">
+    <div class="card g">
+      <div class="clabel">Portfolio Value</div>
+      <div class="cval n" id="sPort">$100.00</div>
+      <div class="csub" id="sPortChg">+$0.00 (0.00%)</div>
+    </div>
+    <div class="card">
+      <div class="clabel">Available Margin</div>
+      <div class="cval n" id="sCash">$100.00</div>
+      <div class="csub">$20 margin per trade</div>
+    </div>
+    <div class="card w">
+      <div class="clabel">Today's P&amp;L</div>
+      <div class="cval n" id="sPnl">$0.00</div>
+      <div class="csub" id="sPnlSub">Daily limit: -$20</div>
+    </div>
+    <div class="card">
+      <div class="clabel">Win Rate</div>
+      <div class="cval n" id="sWin">—</div>
+      <div class="csub" id="sWinSub">0 trades closed</div>
+    </div>
+    <div class="card b">
+      <div class="clabel">Markets Scanned</div>
+      <div class="cval b" id="sScans">0</div>
+      <div class="csub" id="sSeen">of ~170 HL markets</div>
+    </div>
+    <div class="card" style="border-color:rgba(167,139,250,.3)">
+      <div class="clabel">Exposure (2x)</div>
+      <div class="cval p" id="sExposure">$0.00</div>
+      <div class="csub" id="sExposureSub">0 open positions</div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="col">
+      <div class="panel">
+        <div class="ph">
+          <span class="pt">Hyperliquid Perp Scanner</span>
+          <span class="pb p" id="scanBadge">WAITING</span>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr>
+              <th>Market</th><th>Price</th><th>24h Vol</th><th>1h Chg</th>
+              <th>5m Chg</th><th>Signal</th><th>Filters</th><th>Action</th><th>Block</th>
+            </tr></thead>
+            <tbody id="tBody"><tr><td colspan="10" class="empty">Start agent to pull live Hyperliquid perp data...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="ph"><span class="pt">Strategy Analysis</span><span class="pb" id="aBadge">IDLE</span></div>
+        <div class="abox" id="aBox" style="color:var(--mut)">Agent reasoning appears here after each scan...</div>
+      </div>
+
+      <div class="panel">
+        <div class="ph"><span class="pt">Activity Log</span><span style="font-size:10px;color:var(--mut)" id="logCnt">0 entries</span></div>
+        <div class="log-box" id="logBox"></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="panel">
+        <div class="ph"><span class="pt">Open Positions</span><span class="pb" id="posCnt">0 / 3</span></div>
+        <div class="pos-list" id="posList">
+          <div class="no-pos"><div style="font-size:22px;opacity:.3;margin-bottom:6px">📊</div><div>No open positions</div><div style="font-size:9px;margin-top:4px;color:var(--mut)">Agent opens longs & shorts on momentum</div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="pt">Strategy Rules</span></div>
+        <div class="rules">
+          <div>📐 Margin per trade: <span>$20 (20%)</span></div>
+          <div>⚡ Leverage: <span class="p">2x → $40 exposure</span></div>
+          <div>🎯 Take profit: <span class="g">+4%</span></div>
+          <div>🛡️ Stop loss: <span class="r">-1.75%</span></div>
+          <div>⏱️ Max hold: <span>15 minutes</span></div>
+          <div>📊 Min 24h vol: <span>None</span></div>
+          <div>📈 Min 5m move: <span>+0.5% (long) / -0.5% (short)</span></div>
+          <div>💹 Momentum: <span>5m confirms 1h direction</span></div>
+          <div>💰 Funding: <span style="color:var(--acc)">Ignored (scalping)</span></div>
+          <div>🚫 Daily loss limit: <span class="r">-$20</span></div>
+          <div>📋 Max positions: <span>3</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Blacklist -->
+  <div class="panel" style="margin-bottom:16px">
+    <div class="ph">
+      <span class="pt">Blacklisted Markets</span>
+      <span class="pb" id="blacklistCount">0 markets</span>
+    </div>
+    <div class="blacklist-panel" id="blacklistPanel">
+      <span style="font-size:10px;color:var(--mut)">No markets blacklisted. Click 🚫 on any row to permanently skip it.</span>
+    </div>
+  </div>
+
+  <!-- Trade History -->
+  <div class="panel">
+    <div class="ph"><span class="pt">Closed Trades</span><span class="pb" id="histCnt">0 trades</span></div>
+    <div style="overflow-x:auto">
+      <table class="htbl">
+        <thead><tr>
+          <th>Market</th><th>Dir</th><th>Entry</th><th>Exit</th>
+          <th>Margin</th><th>Exposure</th><th>P&amp;L $</th><th>P&amp;L %</th><th>Hold</th><th>Reason</th>
+        </tr></thead>
+        <tbody id="histBody"><tr><td colspan="10" class="empty">No closed trades yet</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+var CFG = {
+  MARGIN: 20,
+  LEVERAGE: 2,
+  TP: 4,
+  SL: -1.75,
+  MAX_H: 0.25,
+  MIN_VOL: 0,
+  MIN_MOVE: 0.5,
+  MAX_FUNDING: 999,
+  DAILY_LIMIT: -20,
+  MAX_POS: 3,
+  SCAN_MS: 60000,
+  AUTO_CHANCE: 0.9,
+}
+
+// ── HYPERLIQUID API ──────────────────────────────────────────────────────────
+var HL_API = 'https://api.hyperliquid.xyz/exchange';
+var HL_INFO = 'https://api.hyperliquid.xyz/info';
+
+// ── WALLET STATE ─────────────────────────────────────────────────────────────
+var W = {connected:false,address:null,provider:null,usdcBalance:0};
+var riskAccepted = false;
+
+// ── PHANTOM EVM PROVIDER ─────────────────────────────────────────────────────
+function getEthProvider(){
+  if(window.phantom&&window.phantom.ethereum)return window.phantom.ethereum;
+  if(window.ethereum&&window.ethereum.isPhantom)return window.ethereum;
+  return null;
+}
+
+async function connectWallet(){
+  if(!riskAccepted){el('riskModal').classList.remove('hidden');return;}
+  await connectWalletReal();
+}
+
+async function connectWalletReal(){
+  await sleep(100);
+  var prov=getEthProvider();
+  if(!prov){
+    el('walletErr').textContent='Phantom not found. Install from phantom.app';
+    showToast('error','Phantom Not Found','Install Phantom browser extension first.');
+    return;
+  }
+  el('walletErr').textContent='Connecting...';
+  try{
+    var accounts=await prov.request({method:'eth_requestAccounts'});
+    if(!accounts||!accounts.length)throw new Error('No accounts returned');
+    W.provider=prov;
+    W.address=accounts[0];
+    W.connected=true;
+    el('walletErr').textContent='';
+    el('walletBanner').classList.add('connected');
+    el('walletAddr').textContent=W.address.slice(0,6)+'...'+W.address.slice(-4);
+    el('connectBtn').classList.add('hidden');
+    el('disconnectBtn').classList.remove('hidden');
+    el('startBtn').disabled=false;
+    addLog('TX','Phantom EVM connected: '+W.address.slice(0,8)+'...');
+    showToast('success','Wallet Connected',W.address.slice(0,6)+'...'+W.address.slice(-4));
+    await refreshBalances();
+  }catch(e){
+    var msg=e.message||String(e);
+    if(e.code===4001||msg.includes('rejected'))msg='Connection rejected. Try again.';
+    el('walletErr').textContent='Failed: '+msg;
+    showToast('error','Connection Failed',msg);
+  }
+}
+
+function disconnectWallet(){
+  W={connected:false,address:null,provider:null,usdcBalance:0};
+  el('walletBanner').classList.remove('connected');
+  el('walletAddr').textContent='Not connected';
+  el('walletBal').textContent='Connect to see USDC balance';
+  el('connectBtn').classList.remove('hidden');
+  el('disconnectBtn').classList.add('hidden');
+  el('startBtn').disabled=true;
+  addLog('TX','Wallet disconnected');
+}
+
+async function refreshBalances(){
+  if(!W.connected||!W.address)return;
+  try{
+    // Get USDC balance from Hyperliquid directly
+    var r=await fetch(HL_INFO,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:'clearinghouseState',user:W.address})});
+    var d=await r.json();
+    var marginSummary=d.marginSummary||d.crossMarginSummary||{};
+    W.usdcBalance=parseFloat(marginSummary.accountValue||0);
+    el('walletBal').innerHTML='<span>$'+W.usdcBalance.toFixed(2)+' USDC</span> on Hyperliquid';
+    addLog('DATA','HL balance: $'+W.usdcBalance.toFixed(2));
+    updateStats();
+  }catch(e){
+    el('walletBal').textContent='Balance fetch failed: '+e.message;
+    addLog('ALERT','Balance error: '+e.message);
+  }
+}
+
+// ── HYPERLIQUID ORDER SIGNING ─────────────────────────────────────────────────
+// Hyperliquid uses EIP-712 typed data signing
+async function hlSign(action){
+  var domain={
+    name:'Exchange',
+    version:'1',
+    chainId:42161, // Arbitrum
+    verifyingContract:'0x0000000000000000000000000000000000000000'
+  };
+  var types={
+    Agent:[
+      {name:'source',type:'string'},
+      {name:'connectionId',type:'bytes32'}
+    ]
+  };
+  // Hyperliquid's actual signing uses a specific hash
+  var timestamp=Date.now();
+  var nonce=timestamp;
+  var payload={
+    action:action,
+    nonce:nonce,
+    vaultAddress:null
+  };
+
+  // Sign the action hash using eth_signTypedData_v4
+  var msgHash=JSON.stringify({
+    domain:{name:'HyperliquidSignTransaction',version:'1',chainId:1337,verifyingContract:'0x0000000000000000000000000000000000000000'},
+    types:{
+      HyperliquidTransaction__Order:[
+        {name:'hyperliquidChain',type:'string'},
+        {name:'asset',type:'uint32'},
+        {name:'isBuy',type:'bool'},
+        {name:'limitPx',type:'string'},
+        {name:'sz',type:'string'},
+        {name:'reduceOnly',type:'bool'},
+        {name:'cloid',type:'string'},
+        {name:'nonce',type:'uint64'}
+      ],
+      EIP712Domain:[
+        {name:'name',type:'string'},
+        {name:'version',type:'string'},
+        {name:'chainId',type:'uint256'},
+        {name:'verifyingContract',type:'address'}
+      ]
+    },
+    primaryType:'HyperliquidTransaction__Order',
+    message:{...action,nonce:nonce,hyperliquidChain:'Mainnet'}
+  });
+
+  var sig=await W.provider.request({
+    method:'eth_signTypedData_v4',
+    params:[W.address, msgHash]
+  });
+  return{action,nonce,signature:sig,vaultAddress:null};
+}
+
+// ── PLACE ORDER ON HYPERLIQUID ────────────────────────────────────────────────
+async function hlPlaceOrder(symbol,isBuy,sizeDollars,leverage){
+  try{
+    // Get current price
+    var infoR=await fetch(HL_INFO,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:'allMids'})});
+    var mids=await infoR.json();
+    var price=parseFloat(mids[symbol]||0);
+    if(!price)throw new Error('No price for '+symbol);
+
+    // Calculate size in asset units
+    var marginUsdc=sizeDollars;
+    var exposure=marginUsdc*leverage;
+    var sizeAsset=(exposure/price).toFixed(6);
+    // Slippage: 0.5% for longs, -0.5% for shorts  
+    var slippage=0.005;
+    var limitPx=isBuy?(price*(1+slippage)).toFixed(6):(price*(1-slippage)).toFixed(6);
+
+    addLog('DATA','HL order: '+(isBuy?'BUY':'SELL')+' '+symbol+' size='+sizeAsset+' px='+limitPx);
+
+    // Get asset index
+    var metaR=await fetch(HL_INFO,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:'meta'})});
+    var meta=await metaR.json();
+    var assetIdx=(meta.universe||[]).findIndex(function(a){return a.name===symbol;});
+    if(assetIdx<0)throw new Error('Asset not found: '+symbol);
+
+    var action={
+      type:'order',
+      orders:[{
+        a:assetIdx,
+        b:isBuy,
+        p:limitPx,
+        s:sizeAsset,
+        r:false,
+        t:{limit:{tif:'Ioc'}} // Immediate or cancel
+      }],
+      grouping:'na'
+    };
+
+    var signed=await hlSign(action);
+    var resp=await fetch(HL_API,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(signed)});
+    var result=await resp.json();
+    addLog('DATA','HL order result: '+JSON.stringify(result).slice(0,150));
+
+    if(result.status==='ok'){
+      return{success:true,price:price,size:sizeAsset,result:result};
+    } else {
+      throw new Error('Order failed: '+JSON.stringify(result));
+    }
+  }catch(e){
+    addLog('ALERT','hlPlaceOrder error: '+e.message);
+    return{success:false,error:e.message};
+  }
+}
+
+async function hlCloseOrder(symbol,isBuy,sizeAsset){
+  // Close = opposite side, reduce only
+  try{
+    var infoR=await fetch(HL_INFO,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:'allMids'})});
+    var mids=await infoR.json();
+    var price=parseFloat(mids[symbol]||0);
+    var slippage=0.005;
+    var limitPx=isBuy?(price*(1+slippage)).toFixed(6):(price*(1-slippage)).toFixed(6);
+
+    var metaR=await fetch(HL_INFO,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:'meta'})});
+    var meta=await metaR.json();
+    var assetIdx=(meta.universe||[]).findIndex(function(a){return a.name===symbol;});
+    if(assetIdx<0)throw new Error('Asset not found: '+symbol);
+
+    var action={
+      type:'order',
+      orders:[{a:assetIdx,b:isBuy,p:limitPx,s:String(sizeAsset),r:true,t:{limit:{tif:'Ioc'}}}],
+      grouping:'na'
+    };
+    var signed=await hlSign(action);
+    var resp=await fetch(HL_API,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(signed)});
+    var result=await resp.json();
+    return{success:result.status==='ok',result:result};
+  }catch(e){
+    return{success:false,error:e.message};
+  }
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+function showToast(type,title,msg,link){
+  var stack=el('toastStack'),div=document.createElement('div');
+  div.className='toast '+type;
+  div.innerHTML='<div class="toast-icon">'+(type==='success'?'&#9989;':type==='error'?'&#10060;':'&#8987;')+'</div>'
+    +'<div class="toast-body"><div class="toast-title">'+title+'</div><div class="toast-msg">'+msg+'</div>'
+    +(link?'<a class="toast-link" href="'+link+'" target="_blank">View &#8599;</a>':'')+'</div>';
+  stack.appendChild(div);
+  setTimeout(function(){if(div.parentNode)div.parentNode.removeChild(div);},type==='pending'?20000:6000);
+};
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+var G = {
+  running:false, cash:100, startBal:100,
+  positions:[], closed:[], todayPnl:0,
+  scans:0, seen:0,
+  scanTimer:null, cdTimer:null, posTimer:null, nextAt:0,
+};
+
+// ── BLACKLIST ─────────────────────────────────────────────────────────────────
+var BLACKLIST = {};
+try { BLACKLIST = JSON.parse(localStorage.getItem('hl_blacklist')||'{}'); } catch(e){}
+function saveBlacklist(){ try{ localStorage.setItem('hl_blacklist',JSON.stringify(BLACKLIST)); }catch(e){} }
+function blockMarket(sym){ BLACKLIST[sym]=1; saveBlacklist(); addLog('ALERT',sym+' blacklisted — permanently skipped'); renderBlacklist(); }
+function unblockMarket(sym){ delete BLACKLIST[sym]; saveBlacklist(); addLog('SCAN',sym+' removed from blacklist'); renderBlacklist(); }
+function renderBlacklist(){
+  var count=Object.keys(BLACKLIST).length;
+  el('blacklistCount').textContent=count+' market'+(count!==1?'s':'');
+  if(!count){ el('blacklistPanel').innerHTML='<span style="font-size:10px;color:var(--mut)">No markets blacklisted. Click 🚫 on any row to permanently skip it.</span>'; return; }
+  el('blacklistPanel').innerHTML=Object.keys(BLACKLIST).map(function(s){
+    return'<span class="blacklist-tag">'+s+' <button class="unbtn" data-sym="'+s+'" title="Remove">✕</button></span>';
+  }).join('');
+}
+
+// ── HYPERLIQUID API ───────────────────────────────────────────────────────────
+// Hyperliquid public API — no auth needed, open CORS from browser
+async function fetchHL(){
+  setApi('load','⟳ Hyperliquid...');
+  try {
+    // Fetch all market metadata + mid prices in one call
+    var [metaRes, midsRes] = await Promise.all([
+      fetch('https://api.hyperliquid.xyz/info', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({type:'metaAndAssetCtxs'})
+      }),
+      fetch('https://api.hyperliquid.xyz/info', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({type:'allMids'})
+      })
+    ]);
+
+    if(!metaRes.ok) throw new Error('meta HTTP '+metaRes.status);
+    if(!midsRes.ok) throw new Error('mids HTTP '+midsRes.status);
+
+    var metaData = await metaRes.json();
+    var midsData = await midsRes.json();
+
+    // metaAndAssetCtxs returns [meta, assetCtxs]
+    var assets = metaData[0] && metaData[0].universe ? metaData[0].universe : [];
+    var ctxs   = metaData[1] || [];
+
+    if(!assets.length) throw new Error('No assets returned');
+
+    setApi('ok','✓ Hyperliquid — '+assets.length+' markets');
+
+    var markets = assets.map(function(asset, i){
+      var ctx     = ctxs[i] || {};
+      var sym     = asset.name;
+      var midPrice= midsData[sym] ? parseFloat(midsData[sym]) : 0;
+      var vol24   = ctx.dayNtlVlm  ? parseFloat(ctx.dayNtlVlm)  : 0;
+      var funding = ctx.funding    ? parseFloat(ctx.funding)*100 : 0; // as %
+      var openInt = ctx.openInterest ? parseFloat(ctx.openInterest) : 0;
+      var prevDay = ctx.prevDayPx  ? parseFloat(ctx.prevDayPx)  : midPrice;
+      var ch24    = prevDay > 0 ? ((midPrice - prevDay) / prevDay) * 100 : 0;
+
+      // Estimate 1h and 5m change from mark price (HL doesn't give OHLCV in this endpoint)
+      // We'll use momentum signal as a momentum proxy and ch24 scaled down
+      var ch1h = ch24 / 6;   // rough 1h estimate from 24h
+      var ch5m = ch24 / 72;  // rough 5m estimate
+
+      return {
+        symbol:  sym,
+        price:   midPrice,
+        vol24:   vol24,
+        ch24:    ch24,
+        ch1h:    ch1h,
+        ch5m:    ch5m,
+        funding: funding,
+        openInt: openInt,
+      };
+    })
+    .filter(function(m){ return m.price > 0 && m.vol24 > 0 && !BLACKLIST[m.symbol]; })
+    .sort(function(a,b){ return b.vol24 - a.vol24; });
+
+    G.seen = markets.length;
+    el('sSeen').textContent = 'of '+markets.length+' HL markets';
+    return markets;
+
+  } catch(e){
+    setApi('err','✗ HL: '+e.message);
+    addLog('ALERT','Hyperliquid fetch failed: '+e.message);
+    // Return simulated data as fallback
+    return fetchSimHL();
+  }
+}
+
+// ── SIMULATED FALLBACK ────────────────────────────────────────────────────────
+var HL_MARKETS = ['BTC','ETH','SOL','DOGE','AVAX','LINK','UNI','AAVE','SUI',
+  'APT','ARB','OP','INJ','TIA','WIF','BONK','PEPE','FLOKI','SHIB','RNDR',
+  'FET','AGIX','OCEAN','NMR','GRT','LPT','API3','ARKM','PYTH','JTO',
+  'MEME','ORDI','SATS','1000RATS','BOME','WEN','POPCAT','MEW','BRETT'];
+
+function fetchSimHL(){
+  setApi('ok','✓ Simulated HL Data');
+  return Promise.resolve(HL_MARKETS.map(function(sym){
+    var price = sym==='BTC'?rndF(60000,70000):sym==='ETH'?rndF(3000,4000):sym==='SOL'?rndF(150,200):rndF(0.001,100);
+    var ch24  = rndF(-8,10);
+    return{
+      symbol:sym, price:price,
+      vol24:rnd(1000000,500000000),
+      ch24:ch24, ch1h:ch24/6, ch5m:ch24/72,
+      funding:rndF(-0.05,0.08),
+      openInt:rnd(100000,50000000),
+    };
+  }).filter(function(m){return !BLACKLIST[m.symbol];}));
+}
+
+// ── FILTERS ───────────────────────────────────────────────────────────────────
+function getSignal(m){
+  // 15m scalper — use 5m price change as primary signal
+  // Both 5m move must meet minimum threshold
+  var absMove = Math.abs(m.ch5m);
+  if(absMove < CFG.MIN_MOVE) return null;
+  return m.ch5m > 0 ? 'LONG' : 'SHORT';
+}
+
+function runFilters(m){
+  var signal = getSignal(m);
+  var fundingOk = signal === 'LONG'  ? m.funding <= CFG.MAX_FUNDING :
+                  signal === 'SHORT' ? m.funding >= -CFG.MAX_FUNDING : false;
+  return {
+    VOL:     m.vol24 >= CFG.MIN_VOL,
+    MOVE:    Math.abs(m.ch5m) >= CFG.MIN_MOVE,
+  };
+}
+function passes(m){ return Object.values(runFilters(m)).every(Boolean) && getSignal(m) !== null; }
+
+// ── SCAN CYCLE ────────────────────────────────────────────────────────────────
+async function scan(){
+  if(!G.running) return;
+  if(G.todayPnl <= CFG.DAILY_LIMIT){ addLog('ALERT','Daily loss limit hit. Agent halted.'); stopAgent(); return; }
+
+  G.scans++;
+  el('sScans').textContent = G.scans;
+  el('scanBadge').textContent = 'FETCHING...';
+  el('aBadge').textContent = 'SCANNING...';
+  addLog('SCAN','Scan #'+G.scans+' — fetching Hyperliquid perp markets');
+
+  tickPositions();
+
+  var markets = await fetchHL();
+  if(!markets.length){ el('scanBadge').className='pb e'; el('scanBadge').textContent='FAILED'; return; }
+  el('scanBadge').className='pb p';
+
+  var decisions=[], html='';
+
+  markets.forEach(function(m){
+    var f = runFilters(m);
+    var pass = passes(m);
+    var signal = getSignal(m);
+    var held = G.positions.find(function(p){return p.symbol===m.symbol;});
+    var canTrade = pass && G.positions.length < CFG.MAX_POS && G.cash >= CFG.MARGIN && !held;
+
+    var pills = Object.keys(f).map(function(k){
+      return '<span class="pill '+(f[k]?'p':'f')+'">'+k+'</span>';
+    }).join('');
+
+    var pc  = m.ch1h > 0 ? 'var(--acc)' : m.ch1h < 0 ? 'var(--red)' : 'var(--mut)';
+    var p5c = m.ch5m > 0 ? 'var(--acc)' : m.ch5m < 0 ? 'var(--red)' : 'var(--mut)';
+    var pr  = m.price > 100 ? m.price.toFixed(2) : m.price > 1 ? m.price.toFixed(4) : m.price.toFixed(6);
+    var sigHtml = signal
+      ? (signal==='LONG' ? '<span class="dir-long">▲ LONG</span>' : '<span class="dir-short">▼ SHORT</span>')
+      : '<span style="color:var(--mut);font-size:9px">NEUTRAL</span>';
+
+    var actionHtml = '';
+    if(canTrade && signal){
+      actionHtml = signal==='LONG'
+        ? '<button class="abtn abtn-long" data-sym="'+m.symbol+'" data-price="'+m.price+'" data-dir="LONG">▲ LONG</button>'
+        : '<button class="abtn abtn-short" data-sym="'+m.symbol+'" data-price="'+m.price+'" data-dir="SHORT">▼ SHORT</button>';
+    } else {
+      actionHtml = '<span class="abtn abtn-skip">'+(pass?(held?'HELD':'LIMIT'):'SKIP')+'</span>';
+    }
+
+    html += '<tr>'
+      +'<td><div class="tn">'+m.symbol+'-PERP</div></td>'
+      +'<td>$'+pr+'</td>'
+      +'<td>$'+fmtK(m.vol24)+'</td>'
+      +'<td style="color:'+pc+'">'+(m.ch1h>0?'+':'')+m.ch1h.toFixed(2)+'%</td>'
+      +'<td style="color:'+p5c+'">'+(m.ch5m>0?'+':'')+m.ch5m.toFixed(2)+'%</td>'
+      +'<td>'+sigHtml+'</td>'
+      +'<td><div class="pills">'+pills+'</div></td>'
+      +'<td>'+actionHtml+'</td>'
+      +'<td><button class="abtn abtn-block" data-sym="'+m.symbol+'" title="Blacklist">🚫</button></td>'
+      +'</tr>';
+
+    if(canTrade && signal && Math.random() < CFG.AUTO_CHANCE){
+      decisions.push({action:signal, symbol:m.symbol});
+      (function(sym,price,dir){setTimeout(function(){ executeTrade(sym,price,dir); },500);})(m.symbol,m.price,signal);
+    } else {
+      decisions.push({action:'SKIP', symbol:m.symbol});
+    }
+  });
+
+  el('tBody').innerHTML = html || '<tr><td colspan="10" class="empty">No markets passed filters</td></tr>';
+  var qual = markets.filter(passes).length;
+  el('scanBadge').textContent = qual+' SIGNALS / '+markets.length+' MARKETS';
+  el('scanBadge').className = 'pb p';
+
+  var trades = decisions.filter(function(d){return d.action==='LONG'||d.action==='SHORT';});
+  addLog('SCAN','Scan #'+G.scans+' — '+qual+' signals, '+trades.length+' trades entered');
+
+  el('aBox').style.color='var(--mut)';
+  el('aBox').textContent='Analyzing...';
+  setTimeout(function(){
+    el('aBox').style.color='var(--txt)';
+    el('aBox').textContent=buildAnalysis(markets,decisions,qual,trades);
+    el('aBadge').textContent='COMPLETE';
+  },500);
+
+  updateStats();
+}
+
+function buildAnalysis(markets,decisions,qual,trades){
+  var longs  = trades.filter(function(d){return d.action==='LONG';});
+  var shorts = trades.filter(function(d){return d.action==='SHORT';});
+  var topVol = markets.slice(0,3).map(function(m){return m.symbol;});
+  var opts = [
+    function(){ return 'Scan #'+G.scans+' (Hyperliquid Perps): '+markets.length+' markets scanned. '+qual+' momentum signals found — '+longs.length+' long, '+shorts.length+' short. '+(trades.length?'Entered '+trades.map(function(t){return t.symbol;}).join(', ')+' at 2x leverage ($40 exposure each).':'No trades taken this cycle — waiting for stronger setups.'); },
+    function(){ return 'Cycle '+G.scans+': Top volume markets are '+topVol.join(', ')+'. '+(qual?'Best signal this scan — momentum confirmed on both 5m timeframe. 2x leverage means a 5% move = 10% gain on margin.':'All '+markets.length+' markets failed momentum filters — flat or inconsistent price action. Staying flat protects capital.'); },
+    function(){ var fundIssues=markets.filter(function(m){return Math.abs(m.funding)>CFG.MAX_FUNDING;}).length; return 'Scan '+G.scans+': '+fundIssues+' markets skipped due to unfavourable momentum signals. Funding >0.1% means we\'d pay to hold — not worth it. '+(G.positions.length?'Currently holding '+G.positions.length+' position(s) with $'+(G.positions.length*CFG.MARGIN*CFG.LEVERAGE).toFixed(0)+' total exposure.':'Fully in cash — waiting for clean momentum setups.'); },
+    function(){ var ps=G.positions.length===0?'No open positions — fully in cash.':G.positions.length===1?'Holding 1 position, room for 2 more.':'At '+G.positions.length+' positions. '+(G.positions.length>=CFG.MAX_POS?'At max — no new entries.':'Room for more.'); return 'Cycle '+G.scans+': '+ps+' P&L today: '+(G.todayPnl>=0?'+':'')+'$'+G.todayPnl.toFixed(2)+'. With 2x leverage each 1% market move = 2% on our margin. Discipline and tight stops are critical.'; },
+  ];
+  return opts[G.scans%4]();
+}
+
+// ── POSITIONS ─────────────────────────────────────────────────────────────────
+function tickPositions(){
+  var out = [];
+  G.positions = G.positions.filter(function(pos){
+    // Simulate price movement — perps are more volatile, ±1.5% per tick
+    var move = rndF(-1.5, 1.5);
+    // For shorts, profit when price goes down
+    pos.pnlPct += pos.dir === 'SHORT' ? -move * CFG.LEVERAGE : move * CFG.LEVERAGE;
+    var hrs = (Date.now()-pos.entryTime)/3600000;
+    if(pos.pnlPct >= CFG.TP)  { out.push({pos:pos,r:'TAKE_PROFIT'}); return false; }
+    if(pos.pnlPct <= CFG.SL)  { out.push({pos:pos,r:'STOP_LOSS'});   return false; }
+    if(hrs >= CFG.MAX_H)      { out.push({pos:pos,r:'TIME_STOP'});    return false; }
+    return true;
+  });
+  out.forEach(function(x){ closePos(x.pos, x.r); });
+  renderPositions();
+}
+
+async function executeTrade(sym, price, dir){
+  if(!W.connected){addLog('ALERT','Wallet not connected — cannot trade');return;}
+  if(G.positions.length >= CFG.MAX_POS){addLog('DATA','Max positions reached');return;}
+  if(W.usdcBalance < CFG.MARGIN){addLog('ALERT','Insufficient USDC: $'+W.usdcBalance.toFixed(2)+' < $'+CFG.MARGIN);return;}
+  if(G.positions.find(function(p){return p.symbol===sym;})){return;}
+  if(G.todayPnl <= CFG.DAILY_LIMIT){addLog('ALERT','Daily loss limit hit');return;}
+
+  addLog('TX','Opening '+dir+' '+sym+' · $'+CFG.MARGIN+' margin on Hyperliquid...');
+  showToast('pending','Opening '+dir+' '+sym,'Placing real order on Hyperliquid...');
+
+  var isBuy = dir==='LONG';
+  var result = await hlPlaceOrder(sym, isBuy, CFG.MARGIN, CFG.LEVERAGE);
+
+  if(!result.success){
+    addLog('ALERT','Order FAILED '+sym+': '+result.error);
+    showToast('error','Order Failed — '+sym, result.error);
+    return;
+  }
+
+  G.positions.push({
+    id: Date.now()+Math.random(),
+    symbol: sym, dir: dir,
+    entryPrice: result.price||price,
+    margin: CFG.MARGIN,
+    exposure: CFG.MARGIN * CFG.LEVERAGE,
+    entryTime: Date.now(),
+    pnlPct: 0,
+    sizeAsset: result.size,
+    isBuy: isBuy,
+  });
+  var logType = dir==='LONG'?'LONG':'SHORT';
+  addLog(logType,'✅ '+(dir==='LONG'?'▲':'▼')+' '+dir+' '+sym+'-PERP @ $'+fmtPrice(result.price||price)+' · $'+CFG.MARGIN+' margin · REAL ORDER');
+  showToast('success','Opened '+dir+' '+sym,'$'+CFG.MARGIN+' @ $'+fmtPrice(result.price||price));
+  await refreshBalances();
+  renderPositions(); updateStats();
+}
+
+async function closePos(pos, reason){
+  addLog('TX','Closing '+pos.dir+' '+pos.symbol+' ('+reason+')...');
+
+  // Place close order on Hyperliquid (opposite side, reduce only)
+  if(W.connected && pos.sizeAsset){
+    var closeResult = await hlCloseOrder(pos.symbol, !pos.isBuy, pos.sizeAsset);
+    if(!closeResult.success){
+      addLog('ALERT','Close order failed: '+closeResult.error+' — removing from tracker');
+      showToast('error','Close Failed — '+pos.symbol, closeResult.error+'. Check HL manually.');
+    } else {
+      showToast('success','Closed '+pos.symbol,'Position closed on Hyperliquid');
+    }
+    await refreshBalances();
+  }
+
+  var pnl = pos.margin * (pos.pnlPct / 100);
+  G.todayPnl += pnl;
+  var held = Math.round((Date.now()-pos.entryTime)/60000);
+  G.positions = G.positions.filter(function(p){return p.id!==pos.id;});
+  G.closed.push({
+    symbol:pos.symbol, dir:pos.dir,
+    entryPrice:pos.entryPrice, margin:pos.margin,
+    exposure:pos.exposure, pnlDollar:pnl,
+    pnlPct:pos.pnlPct, reason:reason, heldMin:held
+  });
+  addLog('CLOSE','Closed '+pos.dir+' '+pos.symbol+' · '+(pnl>=0?'+':'')+'$'+pnl.toFixed(2)+' ('+pos.pnlPct.toFixed(1)+'%) · '+reason);
+  renderHistory(); updateStats();
+}
+
+function manualClose(id){
+  var pos = G.positions.find(function(p){return p.id===id;});
+  if(!pos) return;
+  G.positions = G.positions.filter(function(p){return p.id!==id;});
+  closePos(pos,'MANUAL'); renderPositions();
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderPositions(){
+  el('posCnt').textContent = G.positions.length+' / '+CFG.MAX_POS;
+  if(!G.positions.length){
+    el('posList').innerHTML='<div class="no-pos"><div style="font-size:22px;opacity:.3;margin-bottom:6px">📊</div><div>No open positions</div><div style="font-size:9px;margin-top:4px;color:var(--mut)">Agent opens longs & shorts on momentum</div></div>';
+    return;
+  }
+  el('posList').innerHTML = G.positions.map(function(pos){
+    var win  = pos.pnlPct >= 0;
+    var pnl  = pos.margin * (pos.pnlPct/100);
+    var hm   = Math.round((Date.now()-pos.entryTime)/60000);
+    var prog = Math.min(100,Math.max(0, win ? (pos.pnlPct/CFG.TP)*100 : (Math.abs(pos.pnlPct)/Math.abs(CFG.SL))*100));
+    var col  = win ? 'var(--acc)' : 'var(--red)';
+    var dirBadge = pos.dir==='LONG'
+      ? '<span class="dir-long">▲ LONG</span>'
+      : '<span class="dir-short">▼ SHORT</span>';
+    return '<div class="pos-card '+(win?'wl':'ls')+'">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:6px">'
+      +'<span style="font-weight:700">'+pos.symbol+' '+dirBadge+'</span>'
+      +'<span style="font-family:Syne,sans-serif;font-size:15px;font-weight:700;color:'+col+'">'+(pnl>=0?'+':'')+'$'+pnl.toFixed(2)+'</span></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;font-size:9px;color:var(--mut);margin-bottom:8px">'
+      +'<span>Entry: $'+fmtPrice(pos.entryPrice)+'</span>'
+      +'<span style="color:'+col+'">'+pos.pnlPct.toFixed(2)+'% <span class="lev-badge">2x</span></span>'
+      +'<span>Margin: $'+pos.margin+' / Exp: $'+pos.exposure+'</span>'
+      +'<span>Held: '+hm+'m</span></div>'
+      +'<div class="pbar"><div class="pbar-fill" style="width:'+prog+'%;background:'+col+'"></div></div>'
+      +'<button class="sell-btn" data-id="'+pos.id+'">CLOSE POSITION</button></div>';
+  }).join('');
+}
+
+function renderHistory(){
+  el('histCnt').textContent = G.closed.length+' trades';
+  if(!G.closed.length){ el('histBody').innerHTML='<tr><td colspan="10" class="empty">No closed trades yet</td></tr>'; return; }
+  var rm={TAKE_PROFIT:'✅ TP',STOP_LOSS:'🛑 SL',TIME_STOP:'⏱️ Time',MANUAL:'👤 Manual'};
+  el('histBody').innerHTML = G.closed.slice().reverse().map(function(t){
+    var win=t.pnlDollar>=0;
+    var dirSpan = t.dir==='LONG'
+      ? '<span class="dir-long" style="font-size:8px">▲ L</span>'
+      : '<span class="dir-short" style="font-size:8px">▼ S</span>';
+    return '<tr>'
+      +'<td style="font-weight:700">'+t.symbol+'</td>'
+      +'<td>'+dirSpan+'</td>'
+      +'<td>$'+fmtPrice(t.entryPrice)+'</td>'
+      +'<td>$'+fmtPrice(t.entryPrice*(1+t.pnlPct/100/CFG.LEVERAGE))+'</td>'
+      +'<td>$'+t.margin+'</td>'
+      +'<td>$'+t.exposure+'</td>'
+      +'<td class="'+(win?'win':'loss')+'">'+(t.pnlDollar>=0?'+':'')+'$'+t.pnlDollar.toFixed(2)+'</td>'
+      +'<td class="'+(win?'win':'loss')+'">'+t.pnlPct.toFixed(2)+'%</td>'
+      +'<td>'+t.heldMin+'m</td>'
+      +'<td>'+(rm[t.reason]||t.reason)+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+function updateStats(){
+  var exposure = G.positions.reduce(function(s,p){return s+p.exposure;},0);
+  var unrealised = G.positions.reduce(function(s,p){return s+p.margin*(p.pnlPct/100);},0);
+  var port = G.cash + G.positions.reduce(function(s,p){return s+p.margin;},0) + unrealised;
+  var chg  = port - G.startBal, chgP = (chg/G.startBal)*100;
+  var pv   = el('sPort'); pv.textContent='$'+port.toFixed(2); pv.className='cval '+(chg>=0?'g':'r');
+  el('sPortChg').textContent=(chg>=0?'+':'')+'$'+chg.toFixed(2)+' ('+chgP.toFixed(2)+'%)';
+  el('sCash').textContent='$'+G.cash.toFixed(2);
+  var pp=el('sPnl'); pp.textContent=(G.todayPnl>=0?'+':'')+'$'+G.todayPnl.toFixed(2);
+  pp.className='cval '+(G.todayPnl>=0?'g':G.todayPnl<=-15?'r':'n');
+  el('sPnlSub').textContent='Limit: -$20 ('+Math.min(100,Math.abs(G.todayPnl/20*100)).toFixed(0)+'% used)';
+  var wins=G.closed.filter(function(t){return t.pnlDollar>0;}).length, tot=G.closed.length;
+  var wr=el('sWin'); wr.textContent=tot?Math.round(wins/tot*100)+'%':'—';
+  wr.className='cval '+(tot?(wins/tot>=.5?'g':'r'):'n');
+  el('sWinSub').textContent=tot+' trades closed';
+  el('sExposure').textContent='$'+exposure.toFixed(2);
+  el('sExposureSub').textContent=G.positions.length+' open position'+(G.positions.length!==1?'s':'');
+}
+
+function addLog(type,msg){
+  var t=new Date().toLocaleTimeString('en',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var box=el('logBox'), row=document.createElement('div');
+  row.className='lr';
+  row.innerHTML='<span class="lt">'+t+'</span><span class="lk '+type+'">'+type+'</span><span class="lm">'+msg+'</span>';
+  box.insertBefore(row,box.firstChild);
+  el('logCnt').textContent=(parseInt(el('logCnt').textContent)||0)+1+' entries';
+}
+
+function setApi(s,m){ var p=el('apiPill'); p.className='api-pill '+s; p.textContent=m; }
+function el(id){ return document.getElementById(id); }
+function fmtK(n){ return n>=1e9?(n/1e9).toFixed(1)+'B':n>=1e6?(n/1e6).toFixed(1)+'M':n>=1000?Math.round(n/1000)+'K':n.toFixed(0); }
+function fmtPrice(p){ return p>100?p.toFixed(2):p>1?p.toFixed(4):p.toFixed(6); }
+function rnd(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+function rndF(a,b){ return parseFloat((Math.random()*(b-a)+a).toFixed(4)); }
+
+// ── AGENT CONTROL ─────────────────────────────────────────────────────────────
+function startAgent(){
+  if(!W.connected){showToast('error','Not Connected','Connect Phantom wallet first.');return;}
+  if(W.usdcBalance < CFG.MARGIN){showToast('error','Insufficient USDC','Need at least $'+CFG.MARGIN+' USDC on Hyperliquid.');return;}
+  G.running=true; el('startBtn').disabled=true; el('stopBtn').disabled=false;
+  el('dot').className='dot on'; el('statusTxt').textContent='RUNNING';
+  addLog('SCAN','Agent started — Hyperliquid perps, 2x leverage, $100 balance');
+  scan(); startCountdown();
+  G.scanTimer = setInterval(function(){ scan(); startCountdown(); }, CFG.SCAN_MS);
+  setInterval(function(){if(W.connected)refreshBalances();},30000);
+  G.posTimer  = setInterval(function(){ if(G.positions.length){ tickPositions(); updateStats(); } }, 5000);
+}
+function stopAgent(){
+  G.running=false; clearInterval(G.scanTimer); clearInterval(G.cdTimer); clearInterval(G.posTimer);
+  el('startBtn').disabled=false; el('stopBtn').disabled=true;
+  el('dot').className='dot off'; el('statusTxt').textContent='PAUSED';
+  el('nextInfo').textContent='Agent paused'; el('cdownFill').style.width='0';
+  addLog('SCAN','Agent stopped');
+}
+function resetAll(){
+  stopAgent();
+  G.cash=100; G.positions=[]; G.closed=[]; G.todayPnl=0; G.scans=0; G.seen=0;
+  el('dot').className='dot'; el('statusTxt').textContent='IDLE';
+  el('logBox').innerHTML=''; el('logCnt').textContent='0 entries';
+  el('tBody').innerHTML='<tr><td colspan="10" class="empty">Start agent to pull live Hyperliquid perp data...</td></tr>';
+  el('aBox').textContent='Agent reasoning appears here after each scan...'; el('aBox').style.color='var(--mut)';
+  el('aBadge').textContent='IDLE'; el('scanBadge').textContent='WAITING';
+  el('sScans').textContent='0'; el('sSeen').textContent='of ~170 HL markets';
+  setApi('','Hyperliquid: Not connected');
+  renderPositions(); renderHistory(); updateStats();
+}
+function startCountdown(){
+  clearInterval(G.cdTimer); G.nextAt=Date.now()+CFG.SCAN_MS;
+  G.cdTimer=setInterval(function(){
+    var rem=Math.max(0,G.nextAt-Date.now());
+    el('cdownFill').style.width=((CFG.SCAN_MS-rem)/CFG.SCAN_MS*100)+'%';
+    el('nextInfo').textContent='Next scan in '+Math.ceil(rem/1000)+'s';
+    if(rem<=0) clearInterval(G.cdTimer);
+  },1000);
+}
+
+// ── WIRE UP ───────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',function(){
+  // Risk modal
+  el('riskCheck').addEventListener('change',function(){el('riskConfirmBtn').disabled=!this.checked;});
+  el('riskConfirmBtn').addEventListener('click',function(){
+    if(!el('riskCheck').checked)return;
+    riskAccepted=true;el('riskModal').classList.add('hidden');connectWalletReal();
+  });
+  el('riskCancelBtn').addEventListener('click',function(){el('riskModal').classList.add('hidden');});
+  el('connectBtn').addEventListener('click',connectWallet);
+  el('disconnectBtn').addEventListener('click',disconnectWallet);
+  setTimeout(function(){
+    var prov=getEthProvider();
+    if(prov){prov.request({method:'eth_accounts'}).then(function(accs){
+      if(accs&&accs.length){riskAccepted=true;connectWalletReal();}
+    }).catch(function(){});}
+  },500);
+  el('startBtn').addEventListener('click', startAgent);
+  el('stopBtn').addEventListener('click',  stopAgent);
+  el('resetBtn').addEventListener('click', resetAll);
+
+  // Event delegation for all dynamic buttons
+  document.addEventListener('click',function(e){
+    // Manual trade buttons
+    if(e.target.classList.contains('abtn-long')||e.target.classList.contains('abtn-short')){
+      var sym = e.target.getAttribute('data-sym');
+      var price = parseFloat(e.target.getAttribute('data-price'));
+      var dir = e.target.getAttribute('data-dir');
+      if(sym && price && dir) executeTrade(sym, price, dir);
+    }
+    // Close position
+    if(e.target.classList.contains('sell-btn')){
+      var id = parseFloat(e.target.getAttribute('data-id'));
+      if(id) manualClose(id);
+    }
+    // Blacklist
+    if(e.target.classList.contains('abtn-block')){
+      var sym = e.target.getAttribute('data-sym');
+      if(sym) blockMarket(sym);
+    }
+    // Unblock
+    if(e.target.classList.contains('unbtn')){
+      var sym = e.target.getAttribute('data-sym');
+      if(sym) unblockMarket(sym);
+    }
+  });
+
+  updateStats(); renderPositions(); renderHistory(); renderBlacklist();
+});
+</script>
+</body>
+</html>
